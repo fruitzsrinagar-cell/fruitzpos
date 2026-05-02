@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    async function checkAuth() {
+        try {
+            const response = await fetch('/api/current-user');
+            if (!response.ok) {
+                // If the server returns 401 (Not logged in), redirect
+                window.location.href = "login.html";
+            }
+        } catch (err) {
+            window.location.href = "login.html";
+        }
+    }
+
+    // Run this check immediately
+    checkAuth();
+</script>
+  <meta charset="UTF-8" />
+  <title>Fruit’z | Billing History</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
+    @media print { .no-print { display: none !important; } #printArea { display: block !important; } }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 10px; }
+  </style>
+</head>
+<body class="p-4 lg:p-10">
+
+<div class="max-w-5xl mx-auto no-print">
+  <header class="flex justify-between items-center mb-10">
+    <div>
+      <!-- <h3 class="text-3xl font-black uppercase tracking-tighter text-slate-900">History</h3> -->
+      <h3 class="text-xs text-blue-500 font-bold uppercase tracking-widest">Billing Records Hub</h3>
+    </div>
+    <a href="homepage.html" class="px-6 py-3 bg-slate-900 text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition">Back</a>
+  </header>
+
+  <div class="flex flex-col md:flex-row gap-4 mb-8">
+    <input id="searchBills" type="text" placeholder="Search by ID or Customer..." oninput="loadSavedBills()" class="flex-1 p-4 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-400 shadow-sm">
+    <div class="bg-green-600 text-white px-8 py-4 rounded-2xl flex items-center justify-between md:justify-center gap-4">
+        <span class="text-[10px] font-black uppercase">Total Records</span>
+        <span id="billCount" class="text-xl font-black">0</span>
+    </div>
+  </div>
+
+  <div id="savedBillsList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+</div>
+
+<div id="detailsModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+  <div id="modalContent" class="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl modal-animate"></div>
+</div>
+
+<div id="printArea" class="hidden text-[10px] font-mono text-black p-4">
+    <div class="text-center font-bold text-lg mb-2">FRUIT’Z</div>
+    <div id="pBillNo" class="border-b mb-1"></div>
+    <div id="pDate" class="border-b mb-1"></div>
+    <div id="pCustomer" class="border-b mb-4"></div>
+    <div id="pItems" class="mb-4"></div>
+    <div class="border-t pt-2 font-bold text-base flex justify-between"><span>TOTAL</span><span>₹<span id="pTotal"></span></span></div>
+</div>
+
+<script>
+const API_URL = 'http://localhost:3000/api/bills';
+let allBills = [];
+const fmt = (n) => parseFloat(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+
+// Helper to format date as dd-mm-yyyy at h:mm AM/PM
+function formatDisplayDate(dateString) {
+    const date = new Date(dateString);
+    const d = String(date.getDate()).padStart(2, '0');
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const y = date.getFullYear();
+    const time = date.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
+    return `${d}-${m}-${y} at ${time}`;
+}
+
+async function loadSavedBills() {
+  const cont = document.getElementById('savedBillsList');
+  const search = document.getElementById('searchBills').value.toLowerCase();
+  try {
+    const res = await fetch(API_URL);
+    allBills = await res.json();
+    const filtered = allBills.filter(b => String(b.id).toLowerCase().includes(search) || (b.customer || "").toLowerCase().includes(search));
+    document.getElementById('billCount').textContent = filtered.length;
+    cont.innerHTML = '';
+    filtered.slice().reverse().forEach(b => {
+      cont.innerHTML += `
+        <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-lg transition-all">
+          <div class="flex justify-between items-start mb-4">
+            <span class="text-[9px] font-black uppercase text-blue-500 bg-blue-50 px-2 py-1 rounded-md">#${String(b.id).toUpperCase()}</span>
+            <span class="text-[9px] font-bold text-slate-400">${formatDisplayDate(b.date)}</span>
+          </div>
+          <h3 class="font-bold text-slate-900 text-lg mb-4">${(b.customer || "CASH").toUpperCase()}</h3>
+          <div class="text-2xl font-black text-blue-600 mb-6">₹${fmt(b.total)}</div>
+          <div class="flex gap-2">
+            <button onclick="viewBillDetails('${b.id}')" class="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-slate-200 transition">View</button>
+            <button onclick="printSpecificBill('${b.id}')" class="flex-1 bg-green-600 text-white py-3 rounded-xl text-[10px] font-black uppercase hover:bg-blue-700 transition">Print</button>
+          </div>
+        </div>`;
+    });
+  } catch(e) { console.error(e); }
+}
+
+function viewBillDetails(id) {
+  const b = allBills.find(x => String(x.id) === String(id));
+  document.getElementById('modalContent').innerHTML = `
+    <div class="flex justify-between items-center mb-6">
+        <h3 class="text-lg font-black text-blue-600">BILL SUMMARY</h3>
+        <button onclick="closeModal()" class="text-slate-400 font-black">✕</button>
+    </div>
+    <div class="grid grid-cols-2 gap-4 text-[10px] font-bold uppercase text-slate-400">
+        <div>Bill No<p class="text-slate-900 text-sm">${String(b.id).toUpperCase()}</p></div>
+        <div>Date<p class="text-slate-900 text-sm">${formatDisplayDate(b.date)}</p></div>
+        <div class="col-span-2">Customer<p class="text-slate-900 text-sm">${(b.customer || "CASH").toUpperCase()}</p></div>
+    </div>
+    <div class="mt-6 border-t pt-4 custom-scrollbar max-h-40 overflow-y-auto">
+        ${b.items.map(it => `<div class="flex justify-between py-1 text-sm font-medium"><span>${it.name} x${it.qty}</span><span>₹${fmt(it.price * it.qty)}</span></div>`).join('')}
+    </div>
+    <div class="mt-6 text-2xl font-black flex justify-between">Total <span>₹${fmt(b.total)}</span></div>
+  `;
+  document.getElementById('detailsModal').classList.remove('hidden');
+}
+
+function printSpecificBill(id) {
+  const b = allBills.find(x => String(x.id) === String(id));
+  document.getElementById('pBillNo').innerText = "BILL: " + b.id;
+  document.getElementById('pDate').innerText = "DATE: " + formatDisplayDate(b.date);
+  document.getElementById('pCustomer').innerText = "CUST: " + (b.customer || "CASH");
+  document.getElementById('pTotal').innerText = fmt(b.total);
+  document.getElementById('pItems').innerHTML = b.items.map(i => `<div>${i.name} x${i.qty} - ₹${fmt(i.price*i.qty)}</div>`).join('');
+  window.print();
+}
+
+function closeModal() { document.getElementById('detailsModal').classList.add('hidden'); }
+loadSavedBills();
+</script>
+</body>
+</html>

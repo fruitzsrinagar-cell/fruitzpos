@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+    async function checkAuth() {
+        try {
+            const response = await fetch('/api/current-user');
+            if (!response.ok) {
+                // If the server returns 401 (Not logged in), redirect
+                window.location.href = "login.html";
+            }
+        } catch (err) {
+            window.location.href = "login.html";
+        }
+    }
+
+    // Run this check immediately
+    checkAuth();
+</script>
+  <meta charset="UTF-8" />
+  <title>Fruit’z | Management Hub</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;400;600;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: whitesmoke; color: #1a1a1a; overflow-x: hidden; }
+    .brand-watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 20vw; font-weight: 800; color: rgba(0, 0, 0, 0.03); z-index: -1; text-transform: uppercase; letter-spacing: -0.05em; pointer-events: none; }
+    .glass-nav { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .menu-tile { background: white; transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1); border: 1px solid transparent; }
+    .icon-circle { background: whitesmoke; color: #be123c; transition: all 0.4s ease; }
+    .crimson-text { color: #be123c; }
+    .animate-fade { animation: fadeIn 0.8s ease forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+
+  <div class="fixed inset-0 flex items-center justify-center pointer-events-none z-[-1] opacity-[0.23]">
+    <img src="logo.jpeg" alt="Logo" class="w-[70vw] max-w-[500px] h-auto object-contain">
+  </div>
+
+  <nav class="glass-nav sticky top-0 z-50 px-4 sm:px-6 py-4">
+    <div class="max-w-7xl mx-auto flex justify-between items-center">
+        <div class="flex items-center gap-2">
+            <span class="text-xl sm:text-2xl font-800 tracking-tighter crimson-text uppercase">Fruit’z</span>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <div class="text-right">
+                <p class="text-[10px] font-black uppercase text-slate-400">User</p>
+                <p class="text-sm font-bold text-slate-900 leading-tight">
+                    <span id="displayUsername" class="capitalize text-blue-600 " >Loading...</span> | <span id="displayRole" class="text-crimson-text text-green-600 "></span>
+                </p>
+            </div>
+            <button onclick="logout()" class="px-4 py-2 rounded-full border border-slate-200 text-[9px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all">Logout</button>
+        </div>
+    </div>
+  </nav>
+
+ <div class="p-6 mt-6">
+    <div class="flex flex-wrap gap-2 mb-3" id="mainFilters">
+        <button id="btn-ALL" onclick="setFilter('ALL')" class="filter-btn px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest bg-slate-900 text-white transition-all">All</button>
+        <button id="btn-ONLINE" onclick="setFilter('ONLINE')" class="filter-btn px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest bg-white border border-slate-200 text-slate-600 transition-all">Online</button>
+        <button id="btn-OFFLINE" onclick="setFilter('OFFLINE')" class="filter-btn px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest bg-white border border-slate-200 text-slate-600 transition-all">Offline</button>
+    </div>
+
+    <div id="onlineSubFilters" class="hidden flex gap-2 ml-4 mb-3">
+        <button id="btn-Swiggy" onclick="setSubFilter('Swiggy')" class="sub-btn px-4 py-1 rounded-full text-[10px] font-bold uppercase border border-slate-300 text-slate-500">Swiggy</button>
+        <button id="btn-Zomato" onclick="setSubFilter('Zomato')" class="sub-btn px-4 py-1 rounded-full text-[10px] font-bold uppercase border border-slate-300 text-slate-500">Zomato</button>
+    </div>
+  </div>
+    
+   <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-12 animate-fade">
+    <div class="bg-white p-6 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100">
+        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Today's Sales</p>
+        <h3 id="statToday" class="text-2xl sm:text-3xl font-800 text-slate-900 truncate">₹0</h3>
+    </div>
+    <div class="bg-white p-6 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100">
+        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Orders</p>
+        <h3 id="statOrders" class="text-2xl sm:text-3xl font-800 text-slate-900 truncate">0</h3>
+    </div>
+    <div class="bg-white p-6 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100">
+        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Month Sales</p>
+        <h3 id="statMonth" class="text-2xl sm:text-3xl font-800 text-slate-900 truncate">₹0</h3>
+    </div>
+</div>
+
+   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade" style="animation-delay: 0.2s;">
+    <a href="Createbill.html" class="menu-tile group rounded-[2.5rem] p-8 flex flex-col">
+        <div class="icon-circle w-14 h-14 rounded-2xl flex items-center justify-center mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+        </div>
+        <h3 class="text-xl font-bold text-slate-900 mb-2">Billing</h3>
+        <span class="text-[10px] font-black crimson-text uppercase tracking-[0.2em]">Launch →</span>
+    </a>
+    
+    <a href="punchorder.html" class="menu-tile group rounded-[2.5rem] p-8 flex flex-col">
+        <div class="icon-circle w-14 h-14 rounded-2xl flex items-center justify-center mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+        </div>
+        <h3 class="text-xl font-bold text-slate-900 mb-2">Punch Online</h3>
+        <span class="text-[10px] font-black crimson-text uppercase tracking-[0.2em]">Add →</span>
+    </a>
+    <a href="adduser.html" onclick="openAddStaff(event)" class="menu-tile group rounded-[2.5rem] p-8 flex flex-col">
+        <div class="icon-circle w-14 h-14 rounded-2xl flex items-center justify-center mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+        </div>
+        <h3 class="text-xl font-bold text-slate-900 mb-2">Add User</h3>
+        <span class="text-[10px] font-black crimson-text uppercase tracking-[0.2em]">Add →</span>
+    </a>
+
+    <a href="viewbills.html" class="menu-tile group rounded-[2.5rem] p-8 flex flex-col">
+        <div class="icon-circle w-14 h-14 rounded-2xl flex items-center justify-center mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+        </div>
+        <h3 class="text-xl font-bold text-slate-900 mb-2">Invoices</h3>
+        <span class="text-[10px] font-black crimson-text uppercase tracking-[0.2em]">View →</span>
+    </a>
+    <a href="todaysorders.html" class="menu-tile group rounded-[2.5rem] p-8 flex flex-col">
+        <div class="icon-circle w-14 h-14 rounded-2xl flex items-center justify-center mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+        </div>
+        <h3 class="text-xl font-bold text-slate-900 mb-2">Deliveries</h3>
+        <span class="text-[10px] font-black crimson-text uppercase tracking-[0.2em]">View →</span>
+    </a>
+    <a href="editmenu.html" class="menu-tile group rounded-[2.5rem] p-8 flex flex-col">
+        <div class="icon-circle w-14 h-14 rounded-2xl flex items-center justify-center mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+        </div>
+        <h3 class="text-xl font-bold text-slate-900 mb-2">Stock</h3>
+        <span class="text-[10px] font-black crimson-text uppercase tracking-[0.2em]">Edit →</span>
+    </a>
+</div>
+
+ <script>
+    let currentMainFilter = 'ALL';
+    let currentSubFilter = null;
+
+    function setFilter(filter) {
+        currentMainFilter = filter;
+        currentSubFilter = null;
+        
+        document.querySelectorAll('#mainFilters .filter-btn').forEach(btn => {
+            btn.classList.replace('bg-slate-900', 'bg-white');
+            btn.classList.replace('text-white', 'text-slate-600');
+        });
+        document.getElementById('btn-' + filter).classList.replace('bg-white', 'bg-slate-900');
+        document.getElementById('btn-' + filter).classList.replace('text-slate-600', 'text-white');
+
+        document.getElementById('onlineSubFilters').classList.toggle('hidden', filter !== 'ONLINE');
+        
+        updateStats();
+    }
+
+    function setSubFilter(sub) {
+        currentSubFilter = sub;
+        document.querySelectorAll('.sub-btn').forEach(btn => {
+            btn.classList.remove('bg-slate-900', 'text-white');
+            btn.classList.add('border-slate-300', 'text-slate-500');
+        });
+        document.getElementById('btn-' + sub).classList.add('bg-slate-900', 'text-white');
+        
+        updateStats();
+    }
+    async function openAddStaff(e) {
+    e.preventDefault();
+
+    try {
+        const res = await fetch('/api/current-user');
+
+        if (!res.ok) {
+            window.location.href = "login.html";
+            return;
+        }
+
+        const data = await res.json();
+
+        if (data.role === 'admin') {
+            window.location.href = "adduser.html";
+        } else {
+            alert("Access Denied: Admins only");
+        }
+
+    } catch (err) {
+        window.location.href = "login.html";
+    }
+}
+    async function updateStats() {
+        try {
+            const response = await fetch('/api/bills');
+            const bills = await response.json();
+            const now = new Date();
+            
+            const filteredBills = bills.filter(bill => {
+                if (currentMainFilter === 'ALL') return true;
+                if (currentMainFilter === 'OFFLINE') return bill.orderSource !== 'ONLINE';
+                if (currentMainFilter === 'ONLINE') {
+                    if (!currentSubFilter) return bill.orderSource === 'ONLINE';
+                    return bill.customer === currentSubFilter;
+                }
+                return true;
+            });
+
+            let todaySales = 0;
+            let monthSales = 0;
+            let totalOrders = filteredBills.length;
+
+            filteredBills.forEach(bill => {
+                const billDate = new Date(bill.deliveryDate || bill.date);
+                const amount = parseFloat(bill.total || 0);
+
+                if (billDate.toDateString() === now.toDateString()) todaySales += amount;
+                if (billDate.getMonth() === now.getMonth() && billDate.getFullYear() === now.getFullYear()) monthSales += amount;
+            });
+
+            document.getElementById('statToday').textContent = `₹${todaySales.toLocaleString()}`;
+            document.getElementById('statOrders').textContent = totalOrders;
+            document.getElementById('statMonth').textContent = `₹${monthSales.toLocaleString()}`;
+            
+        } catch (err) { 
+            console.error("Error fetching stats:", err); 
+        }
+    }
+     async function displayLoggedInUser() {
+    try {
+        const response = await fetch('/api/current-user', { credentials: 'include' });
+        if (response.ok) {
+            const data = await response.json();
+            
+            // 1. Update the UI Text
+            document.getElementById('displayUsername').textContent = data.username;
+            document.getElementById('displayRole').textContent = data.role ? data.role.toUpperCase() : 'USER';
+
+            // 2. Identify the "Add User" Tile
+            const addUserTile = document.querySelector('a[href="adduser.html"]');
+            
+            // 3. SECURE CHECK: Only "admin" (case insensitive) is allowed
+            const userRole = (data.role || '').toLowerCase();
+
+            if (userRole !== 'admin') {
+                // Change the link to do nothing
+                addUserTile.href = "javascript:void(0)"; 
+                
+                // Show the "No Access" message on click
+                addUserTile.onclick = function(e) {
+                    e.preventDefault();
+                    alert("Access Denied: You have no access to staff management.");
+                };
+                
+                // Visually indicate it is locked
+                addUserTile.style.opacity = "0.4";
+                addUserTile.style.filter = "grayscale(100%)";
+                addUserTile.querySelector('span').textContent = "LOCKED";
+                addUserTile.querySelector('h3').classList.add('text-slate-400');
+            }
+        }
+    } catch (error) {
+        console.error("Could not fetch user:", error);
+    }
+}
+    async function logout() {
+        try {
+            const response = await fetch('/api/logout', { method: 'POST' });
+            if (response.ok) {
+                localStorage.removeItem("fruitz_session"); 
+                window.location.href = "login.html";
+            }
+        } catch (error) {
+            console.error("Logout failed:", error);
+        }
+    }
+
+    async function displayLoggedInUser() {
+    try {
+        const response = await fetch('/api/current-user', { credentials: 'include' });
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById('displayUsername').textContent = data.username;
+            
+            // Logic to display 'Admin' if the property is true
+          document.getElementById('displayRole').textContent = 
+    data.role ? data.role.toUpperCase() : 'USER';
+        }
+    } catch (error) {
+        console.error("Could not fetch user:", error);
+    }
+}
+    window.onload = () => { 
+        displayLoggedInUser();
+        updateStats();
+    };
+</script>
+</body>
+</html>

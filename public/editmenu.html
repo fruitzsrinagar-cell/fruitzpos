@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+    async function checkAuth() {
+        try {
+            const response = await fetch('/api/current-user');
+            if (!response.ok) {
+                // If the server returns 401 (Not logged in), redirect
+                window.location.href = "login.html";
+            }
+        } catch (err) {
+            window.location.href = "login.html";
+        }
+    }
+
+    // Run this check immediately
+    checkAuth();
+</script>
+  <meta charset="UTF-8" />
+  <title>Fruit’z - Menu Management</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+  <div class="max-w-6xl mx-auto space-y-6">
+    <header class="text-center bg-white rounded shadow p-6">
+      <h1 class="text-4xl font-extrabold text-red-700">Fruit’z</h1>
+      <h2 class="text-2xl font-bold text-green-500">Menu Database Manager</h2>
+    </header>
+
+    <section class="bg-white p-6 rounded shadow">
+      <h2 class="text-xl font-semibold text-green-700 border-b pb-2">Add New Item</h2>
+      <div class="grid md:grid-cols-3 gap-3 mt-4">
+        <input id="itemName" type="text" placeholder="Item Name" class="border rounded px-3 py-2">
+        <input id="itemPrice" type="number" placeholder="Price (₹)" class="border rounded px-3 py-2">
+        <button onclick="addMenuItem()" id="addBtn" class="bg-green-600 text-white px-4 py-2 rounded">Add to Database</button>
+      </div>
+
+      <div class="mt-8">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="font-bold text-lg">Live Menu Items</h3>
+          <button onclick="fetchMenuFromDB()" class="text-blue-600 text-sm">🔄 Refresh</button>
+        </div>
+        <div id="menuItems" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      </div>
+    </section>
+  </div>
+
+ <script>
+const API_URL = '/api/menu';
+
+async function fetchMenuFromDB() {
+    const box = document.getElementById('menuItems');
+    box.innerHTML = '<p class="text-center col-span-full">Loading...</p>';
+    
+    try {
+        const response = await fetch(API_URL);
+        const menu = await response.json();
+        
+        box.innerHTML = ''; 
+        if(menu.length === 0) {
+            box.innerHTML = '<p class="text-center col-span-full text-gray-400">No items found.</p>';
+            return;
+        }
+
+        menu.forEach(m => {
+            box.innerHTML += `
+                <div class="bg-white border p-4 rounded-lg flex justify-between items-center shadow-sm">
+                    <div>
+                        <div class="font-bold text-lg uppercase">${m.name}</div>
+                        <div class="text-green-600 font-bold">₹${parseFloat(m.price).toFixed(2)}</div>
+                    </div>
+                    <button onclick="removeMenuItem('${m._id}')" class="bg-red-50 text-red-600 px-3 py-1 rounded-md font-bold hover:bg-red-100">Delete</button>
+                </div>`;
+        });
+    } catch (e) {
+        box.innerHTML = '<p class="text-red-500 text-center col-span-full">Database connection failed.</p>';
+    }
+}
+
+async function addMenuItem() {
+    const name = document.getElementById('itemName').value.trim();
+    const price = document.getElementById('itemPrice').value;
+
+    if (!name || !price) {
+        alert("Enter name and price");
+        return;
+    }
+
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, price })
+        });
+
+        if (!response.ok) {
+            const err = await response.text();
+            console.error(err);
+            alert("Error saving item");
+            return;
+        }
+
+        document.getElementById('itemName').value = '';
+        document.getElementById('itemPrice').value = '';
+
+        fetchMenuFromDB();
+    } catch (e) {
+        alert("Server error");
+    }
+}
+
+async function removeMenuItem(id) {
+    if(!confirm("Delete this item?")) return;
+    try {
+        const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+        if(response.ok) fetchMenuFromDB();
+    } catch (e) {
+        alert("Delete failed");
+    }
+}
+
+window.onload = fetchMenuFromDB;
+</script>

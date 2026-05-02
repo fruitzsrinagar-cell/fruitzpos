@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+    async function checkAuth() {
+        try {
+            const response = await fetch('/api/current-user');
+            if (!response.ok) {
+                // If the server returns 401 (Not logged in), redirect
+                window.location.href = "login.html";
+            }
+        } catch (err) {
+            window.location.href = "login.html";
+        }
+    }
+
+    // Run this check immediately
+    checkAuth();
+</script>
+  <meta charset="UTF-8" />
+  <title>Fruit’z | Premium Billing</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+    .receipt-dashed { border-top: 2px dashed #e2e8f0; }
+    @media print { .no-print { display: none !important; } }
+    input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+    
+    /* Perfect Dropdown Positioning */
+    .action-dropdown { position: relative; }
+    .dropdown-menu { 
+        display: none; 
+        position: absolute; 
+        right: 0; 
+        top: 100%; 
+        z-index: 1000; 
+        min-width: 140px; 
+        background: white;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        border: 1px solid #e2e8f0;
+        border-radius: 0.75rem;
+    }
+    .dropdown-menu.show { display: block; }
+
+    /* Mobile Card Styles for Transactions */
+    @media (max-width: 1024px) {
+        #transactionsTable thead { display: none; }
+        #savedBillsList { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; padding: 1rem 0; }
+        #savedBillsList tr { display: block; background: white; border: 1px solid #e2e8f0; border-radius: 1rem; padding: 1rem; margin-bottom: 0.5rem; position: relative; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        #savedBillsList td { display: block; text-align: left !important; padding: 0.25rem 0; border: none; }
+        #savedBillsList td:first-child { font-size: 1.1rem; border-bottom: 1px solid #f1f5f9; margin-bottom: 0.5rem; padding-bottom: 0.5rem; }
+        #savedBillsList td:last-child { position: absolute; top: 1rem; right: 1rem; }
+        #savedBillsList td::before { content: attr(data-label); font-weight: 700; text-transform: uppercase; font-size: 0.65rem; color: #94a3b8; display: block; margin-bottom: 2px; }
+        #savedBillsList td:last-child::before { display: none; }
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-800">
+<header class="bg-white border-b px-4 lg:px-8 py-4 sticky top-0 z-50">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div class="bg-indigo-600 text-white p-2 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2-2v14a2 2 0 002 2z" />
+                </svg>
+            </div>
+            <h1 class="text-lg font-bold tracking-tight text-slate-900">FRUIT’Z</h1>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="homepage.html" class="notification-pill flex items-center gap-2 px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-200 transition-all text-[9px] font-black uppercase tracking-widest">
+                Home
+            </a>
+            
+            <a href="todaysorders.html" class="notification-pill relative flex items-center gap-2 px-3 py-2 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 hover:bg-rose-100 transition-all text-[9px] font-black uppercase tracking-widest">
+                <span class="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+                </span>
+                Today
+            </a>
+            
+            <a href="viewbills.html" class="notification-pill flex items-center gap-2 px-3 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-indigo-600 hover:bg-indigo-100 transition-all text-[9px] font-black uppercase tracking-widest">
+                View Bills
+            </a>
+        </div>
+    </div>
+</header>
+  
+
+  <main class="max-w-[1600px] mx-auto p-4 lg:p-8 space-y-6 lg:space-y-8">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+        <div class="lg:col-span-7 xl:col-span-8 space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 lg:p-6">
+                <h3 class="text-sm font-bold text-indigo-600 uppercase mb-4">Customer & Delivery Details</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Customer Name</label>
+                        <input id="customerName" type="text" placeholder="WALK-IN" class="w-full bg-slate-50 border-none rounded-xl px-4 py-2 focus:ring-2 focus:ring-indigo-500 uppercase">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Phone Number</label>
+                        <input id="customerPhone" type="tel" placeholder="7006xxxxxx" class="w-full bg-slate-50 border-none rounded-xl px-4 py-2 focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Delivery Date</label>
+                        <input id="deliveryDate" type="date" class="w-full bg-slate-50 border-none rounded-xl px-4 py-2 focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Delivery Time</label>
+                        <input id="deliveryTime" type="time" class="w-full bg-slate-50 border-none rounded-xl px-4 py-2 focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Delivery Address</label>
+                        <input id="customerAddress" type="text" placeholder="ENTER FULL ADDRESS" class="w-full bg-slate-50 border-none rounded-xl px-4 py-2 focus:ring-2 focus:ring-indigo-500 uppercase">
+                    </div>
+                    <div class="sm:col-span-2 lg:col-span-1">
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Bill No.</label>
+                        <input id="billNumber" type="text" readonly class="w-full bg-slate-100 border-none rounded-xl px-4 py-2 text-slate-500 font-mono">
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 lg:p-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <h2 class="text-lg font-bold">Quick Menu</h2>
+                    <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+                        <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
+                            <input id="deliveryChargeAmount" type="number" placeholder="Fee" class="w-14 bg-white border-none rounded-md px-2 py-1 text-sm focus:ring-1 focus:ring-indigo-500" value="50">
+                            <button onclick="addDeliveryCharge()" class="bg-slate-800 text-white px-2 py-1 rounded-md text-[10px] font-bold hover:bg-black">Add Delivery</button>
+                        </div>
+                        <select id="selectItem" class="flex-1 sm:flex-none bg-slate-50 border-none rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+                            <option value="">Select Item...</option>
+                        </select>
+                        <input id="itemQuantity" type="number" min="1" value="1" class="w-14 bg-slate-50 border-none rounded-lg px-2 py-2 text-center focus:ring-2 focus:ring-indigo-500">
+                        <button onclick="addItemToBill()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium shadow-md">Add</button>
+                    </div>
+                </div>
+                <div id="menuItems" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-[400px] lg:max-h-[300px] overflow-y-auto custom-scrollbar pr-2"></div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-5 xl:col-span-4">
+            <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden sticky top-24">
+                <div class="bg-slate-900 text-white p-4 lg:p-6 text-center">
+                    <h2 class="font-bold tracking-widest text-xl uppercase">Receipt</h2>
+                </div>
+                <div class="p-4 lg:p-6">
+                    <div id="billItemsContainer" class="space-y-4 min-h-[100px] max-h-[300px] overflow-y-auto custom-scrollbar">
+                        <p class="text-center text-slate-400 py-10 uppercase font-bold">Your cart is empty</p>
+                    </div>
+                    <div class="receipt-dashed mt-6 pt-6 space-y-3">
+                        <div class="flex justify-between text-slate-600 text-sm">
+                            <span>Subtotal</span>
+                            <span class="font-medium">₹<span id="subtotal">0.00</span></span>
+                        </div>
+                        <div class="flex justify-between items-center text-slate-600 text-sm">
+                            <span>Discount (₹)</span>
+                            <input id="discount" type="number" value="0" oninput="calcTotals()" class="w-20 text-right bg-slate-50 border-none rounded-md px-2 py-1 focus:ring-1 focus:ring-indigo-500 font-bold">
+                        </div>
+                        <div class="flex justify-between items-center text-indigo-600 font-semibold text-sm">
+                            <span>Advance Paid (₹)</span>
+                            <input id="advance" type="number" value="0" oninput="calcTotals()" class="w-20 text-right bg-indigo-50 border-none rounded-md px-2 py-1 focus:ring-1 focus:ring-indigo-500 font-bold">
+                        </div>
+                        <div class="flex justify-between text-slate-900 text-xl font-bold pt-3 border-t">
+                            <span id="balanceLabel" class="text-base uppercase">Balance Due</span>
+                            <span class="text-indigo-600">₹<span id="total">0.00</span></span>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 mt-6">
+                        <button onclick="clearBill()" class="py-3 px-2 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 text-xs uppercase">Clear</button>
+                        <button onclick="saveBill()" class="py-3 px-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 shadow-lg text-xs uppercase">Save Bill</button>
+                        <button onclick="printThermal()" class="py-3 px-4 col-span-2 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 shadow-lg uppercase text-xs">Print Thermal Receipt</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 lg:p-6">
+        <h2 class="text-xl font-bold text-slate-900 mb-4">Recent Transactions</h2>
+        <div class="overflow-x-auto" style="min-height: 200px;">
+            <table id="transactionsTable" class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="text-slate-400 text-xs uppercase font-bold border-b">
+                        <th class="px-4 py-4">Bill No</th>
+                        <th class="px-4 py-4">Customer</th>
+                        <th class="px-4 py-4">Delivery</th>
+                        <th class="px-4 py-4 text-right">Total</th>
+                        <th class="px-4 py-4 text-right">Advance</th>
+                        <th class="px-4 py-4 text-right">Balance</th>
+                        <th class="px-4 py-4 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="savedBillsList" class="text-sm divide-y divide-slate-50"></tbody>
+            </table>
+        </div>
+    </section>
+  </main>
+
+  <div id="infoModal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+      <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+          <div class="bg-slate-800 px-6 py-4 flex justify-between items-center text-white">
+              <h3 class="font-bold uppercase tracking-widest text-sm">Bill Details</h3>
+              <button onclick="closeModal('infoModal')" class="hover:text-white/70 text-2xl">&times;</button>
+          </div>
+          <div id="modalBody" class="p-6 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar"></div>
+          <div class="p-4 bg-slate-50 border-t flex justify-end">
+              <button onclick="closeModal('infoModal')" class="px-6 py-2 bg-slate-200 text-slate-700 rounded-lg font-bold text-xs uppercase">Close</button>
+          </div>
+      </div>
+  </div>
+
+  <div id="editModal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+        <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white">
+            <h3 class="font-bold uppercase tracking-widest text-sm">Update Transaction</h3>
+            <button onclick="closeModal('editModal')" class="hover:text-white/70 text-2xl">&times;</button>
+        </div>
+        <div id="editModalBody" class="p-6 space-y-4"></div>
+        <div id="editModalFooter" class="p-4 bg-slate-50 border-t flex flex-wrap justify-end gap-2">
+            <button onclick="closeModal('editModal')" class="px-4 py-2 text-slate-500 font-bold text-xs uppercase">Cancel</button>
+            <button id="markPaidBtn" class="px-4 py-2 bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg font-bold text-xs uppercase">Mark All Paid</button>
+            <button id="saveEditBtn" class="px-6 py-2 bg-indigo-600 text-white rounded-lg font-bold shadow-md text-xs uppercase">Update Record</button>
+        </div>
+    </div>
+  </div>
+
+  <div id="printArea" class="hidden">
+    <div style="width:58mm; padding:6px 6px 10px; font-family:monospace; font-size:12px; color: #000;">
+      <div style="text-align:center; font-weight:900; font-size:24px;">FRUIT’Z</div>
+      <div style="text-align:center; font-size:11px; font-style: italic;">For Your Wellbeing</div>
+      <div style="text-align:center; font-size:11px;">FSSIC NO : 24552365210253</div>
+      <div style="text-align:center; font-size:11px;">Batamaloo, Srinagar</div>
+      <div style="text-align:center; font-size:11px; font-weight: bold;">7006149827, 7889762496</div>
+      <hr style="border:1px solid #000; margin:6px 0;">
+      <div id="pBillNo" style="font-weight: bold;"></div>
+      <div id="pDate"></div>
+      <div id="pCustomer" style="text-transform: uppercase;"></div>
+      <div id="pPhone"></div>
+      <div id="pAddress" style="text-transform: uppercase;"></div>
+      <div id="pDeliveryDate" style="font-weight: bold;"></div>
+      <div id="pDeliveryTime" style="font-weight: bold;"></div>
+      <hr style="border:1px solid #000; margin:8px 0;">
+      <div style="display:flex; font-weight:bold;">
+        <div style="width:50%;">Item</div>
+        <div style="width:20%; text-align:center;">Qty</div>
+        <div style="width:30%; text-align:right;">Price</div>
+      </div>
+      <div id="pItems" style="margin-top:4px;"></div>
+      <hr style="border:1px solid #000; margin:6px 0;">
+      <div style="text-align:right;">Subtotal: ₹<span id="pSubtotal"></span></div>
+      <div style="text-align:right;">Discount: ₹<span id="pDiscount"></span></div>
+      <div style="text-align:right; font-weight:bold;">Advance Paid: ₹<span id="pAdvance"></span></div>
+      <div style="text-align:right; font-weight:900; font-size:14px; margin-top:2px;">
+        Balance: ₹<span id="pTotal"></span>
+      </div>
+      <hr style="border:1px solid #000; margin:6px 0;">
+      <div style="text-align:center; font-size:8px; font-weight:700; margin-bottom: 4px;">Also on swiggy | zomato</div>
+      <div style="text-align:center; font-size:10px; font-style: italic; border-top: 1px dotted #000; padding-top: 4px;">powdered by Fruit'z billing software</div>
+    </div>
+  </div>
+
+  <script>
+   const successSound = new Audio('success.mp3'); 
+
+// Debugging: Check if the file loads
+successSound.addEventListener('error', (e) => {
+    console.error("Audio file failed to load. Check path:", e);
+});
+
+    let menu = []; 
+    let billItems = [];
+    // let billCounter = parseInt(localStorage.getItem("billCounter") || "1", 10);
+    let currentSavedBills = [];
+
+    function fmt(n) { return Number(n).toFixed(2); }
+
+    function formatDateDDMMYYYY(dateInput) {
+        if (!dateInput) return "-";
+        const d = new Date(dateInput);
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        return `${dd}-${mm}-${yyyy}`;
+    }
+
+    function formatTime12H(timeStr) {
+        if (!timeStr) return "";
+        const [hours, minutes] = timeStr.split(':');
+        const h = parseInt(hours);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const h12 = h % 12 || 12;
+        return `${h12}:${minutes} ${ampm}`;
+    }
+
+    function updateTime() {
+        const d = new Date();
+        const topDate = document.getElementById('topDate');
+        const topTime = document.getElementById('topTime');
+        if(topDate) topDate.textContent = formatDateDDMMYYYY(d);
+        if(topTime) topTime.textContent = d.toLocaleTimeString();
+    }
+    setInterval(updateTime, 1000);
+
+    async function fetchMenuFromDB() {
+        try {
+            const response = await fetch('/api/menu');
+            menu = await response.json();
+            renderMenu();
+        } catch (err) {
+            console.error("Database connection failed.");
+        }
+    }
+
+    function renderMenu() {
+        const box = document.getElementById('menuItems');
+        const colors = ['bg-purple-700 hover:bg-purple-800', 'bg-blue-600 hover:bg-blue-800', 'bg-green-600 hover:bg-green-800', 'bg-orange-400 hover:bg-orange-500', 'bg-yellow-400', 'bg-red-500 hover:bg-red-800', 'bg-pink-500 hover:bg-pink-800'];
+        box.innerHTML = menu.map((m, i) => {
+            const colorClass = colors[i % colors.length];
+            const textColor = (colorClass.includes('yellow')) ? 'text-slate-900' : 'text-white';
+            return `<div onclick="quickAdd(${i})" class="${colorClass} rounded-xl p-3 cursor-pointer transition-all shadow-md transform active:scale-95"><p class="font-bold ${textColor} text-xs uppercase tracking-wide truncate">${m.name}</p><p class="text-[10px] ${textColor} opacity-90 font-black">₹${parseFloat(m.price).toFixed(2)}</p></div>`;
+        }).join('');
+        document.getElementById('selectItem').innerHTML = `<option value="">Select...</option>` + menu.map((m, i) => `<option value="${i}">${m.name}</option>`).join('');
+    }
+
+    function quickAdd(idx) {
+        const item = menu[idx];
+        const existing = billItems.find(b => b.name === item.name);
+        if (existing) { existing.quantity += 1; }
+        else { billItems.push({ ...item, quantity: 1 }); }
+        renderBillItems();
+    }
+
+    function addDeliveryCharge() {
+        const amount = parseFloat(document.getElementById('deliveryChargeAmount').value) || 0;
+        if (amount > 0) {
+            const existing = billItems.find(b => b.name === "DELIVERY CHARGE");
+            if (existing) existing.price = amount;
+            else billItems.push({ name: "DELIVERY CHARGE", price: amount, quantity: 1 });
+            renderBillItems();
+        }
+    }
+
+    function addItemToBill() {
+        const idx = document.getElementById('selectItem').value;
+        const qty = parseInt(document.getElementById('itemQuantity').value);
+        if (idx !== "" && qty > 0) {
+            const item = menu[idx];
+            const existing = billItems.find(b => b.name === item.name);
+            if (existing) existing.quantity += qty;
+            else billItems.push({ ...item, quantity: qty });
+            renderBillItems();
+            document.getElementById('itemQuantity').value = 1;
+        }
+    }
+
+    function renderBillItems() {
+        const container = document.getElementById('billItemsContainer');
+        if (billItems.length === 0) {
+            container.innerHTML = `<p class="text-center text-slate-400 py-10 uppercase font-bold">Your cart is empty</p>`;
+            calcTotals(); return;
+        }
+        container.innerHTML = billItems.map((it, i) => `<div class="flex justify-between items-center border-b border-slate-50 pb-2 text-sm"><div class="flex-1"><p class="font-medium uppercase truncate max-w-[150px]">${it.name}</p><p class="text-[10px] text-slate-400">${it.quantity} x ₹${it.price}</p></div><div class="text-right"><p class="font-bold">₹${fmt(it.price * it.quantity)}</p><button onclick="removeBillItem(${i})" class="text-[10px] text-rose-500 font-bold uppercase">REMOVE</button></div></div>`).join('');
+        calcTotals();
+    }
+
+    function removeBillItem(idx) { billItems.splice(idx, 1); renderBillItems(); }
+
+    function calcTotals() {
+        const sub = billItems.reduce((s, i) => s + (i.price * i.quantity), 0);
+        const disc = parseFloat(document.getElementById('discount').value) || 0;
+        const adv = parseFloat(document.getElementById('advance').value) || 0;
+        const afterDisc = Math.max(0, sub - disc);
+        const balance = afterDisc - adv;
+        document.getElementById('subtotal').textContent = fmt(sub);
+        document.getElementById('total').textContent = fmt(balance);
+        const totalEl = document.getElementById('total');
+        if (balance > 0) totalEl.className = "text-rose-600";
+        else if (balance < 0) totalEl.className = "text-indigo-600";
+        else totalEl.className = "text-emerald-600";
+    }
+    async function fetchNewBillId() {
+    try {
+        const response = await fetch('/api/next-bill-id');
+        
+        if (!response.ok) {
+            throw new Error('Server returned an error');
+        }
+        
+        const data = await response.json();
+        document.getElementById('billNumber').value = data.billId;
+    } catch (err) {
+        console.error("Failed to fetch bill ID:", err);
+        // Optional: show a fallback or alert
+        document.getElementById('billNumber').value = "ERROR"; 
+    }
+}
+    function getCurrentBillObj() {
+        return {
+            id: document.getElementById('billNumber').value,
+            date: new Date().toISOString(),
+            customer: document.getElementById('customerName').value.toUpperCase() || "WALK-IN",
+            phone: document.getElementById('customerPhone').value,
+            address: document.getElementById('customerAddress').value.toUpperCase(),
+            deliveryDate: document.getElementById('deliveryDate').value,
+            deliveryTime: document.getElementById('deliveryTime').value,
+            items: JSON.parse(JSON.stringify(billItems)),
+            subtotal: document.getElementById('subtotal').textContent,
+            orderSource: 'offline',
+            discount: document.getElementById('discount').value || 0,
+            advance: document.getElementById('advance').value || 0,
+            total: document.getElementById('total').textContent
+        };
+    }
+    // Add this to your existing script section
+document.addEventListener('keydown', function(event) {
+    // Check if the pressed key is F1
+    if (event.key === 'F1') {
+        event.preventDefault(); // Prevents the browser's default help menu from opening
+        clearBill(); // Triggers your existing clear function
+        console.log("Bill cleared via F1");
+    }
+    // F6 to Save Bill
+    if (event.key === 'F6') {
+        event.preventDefault(); // Prevents browser-specific F6 behavior (usually address bar focus)
+        saveBill();
+    }
+});
+
+
+ async function saveBill() {
+    if(billItems.length === 0) return alert("Empty Bill");
+    const bill = getCurrentBillObj();
+    try {
+        const response = await fetch('/api/bills', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(bill)
+        });
+        
+        // UPDATE THIS SECTION
+        if (response.ok) {
+            // Reset sound to start and play
+            successSound.currentTime = 0; 
+            successSound.play().catch(e => console.error("Audio playback error:", e));
+            
+            alert("Bill saved successfully!");
+            clearBill();
+            await loadSavedBills();
+        }
+    } catch (err) { alert("Server is not running!"); }
+}
+    function toggleDropdown(event, index) {
+        event.stopPropagation();
+        document.querySelectorAll('.dropdown-menu').forEach(menu => {
+            if(menu.id !== `dropdown-${index}`) menu.classList.remove('show');
+        });
+        const dropdown = document.getElementById(`dropdown-${index}`);
+        closeAllDropdowns(); 
+        dropdown.classList.toggle('show');
+    }
+
+    window.onclick = function(event) {
+        if (!event.target.closest('.action-dropdown')) {
+            document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                menu.classList.remove('show');
+            });
+        }
+    }
+
+    function closeAllDropdowns() {
+    document.querySelectorAll('.dropdown-menu').forEach(menu => {
+        menu.classList.remove('show');
+    });
+}
+
+    async function loadSavedBills() {
+    try {
+        const response = await fetch('/api/bills');
+        currentSavedBills = await response.json();
+        const cont = document.getElementById('savedBillsList');
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+
+        cont.innerHTML = currentSavedBills.map((b, i) => {
+            // Check if it is an online order
+            const isOnline = b.orderSource === 'ONLINE';
+            
+            // If ONLINE, force balance to 0, otherwise calculate normally
+            const displayBalance = isOnline ? 0 : parseFloat(b.total || 0);
+            const balanceVal = parseFloat(b.total || 0);
+            
+            // Visual indicators
+            const balanceColor = displayBalance > 0 ? 'text-blue-600' : 'text-emerald-600';
+            const balanceText = displayBalance > 0 ? `₹${fmt(displayBalance)}` : "PAID";
+            
+            let dateColor = "text-slate-500";
+            let formattedDelivery = "-";
+
+            if (b.deliveryDate) {
+                const dDate = new Date(b.deliveryDate); dDate.setHours(0,0,0,0);
+                formattedDelivery = formatDateDDMMYYYY(b.deliveryDate);
+                if (b.deliveryTime) formattedDelivery += " (" + formatTime12H(b.deliveryTime) + ")";
+                if (dDate.getTime() === today.getTime()) dateColor = "text-blue-600";
+                else if (dDate.getTime() > today.getTime()) dateColor = "text-rose-600";
+            }
+
+            return `<tr class="hover:bg-slate-50 border-b">
+                <td data-label="Bill ID" class="px-4 py-4 font-mono font-bold text-indigo-600">${b.id}</td>
+                <td data-label="Customer" class="px-4 py-4 font-medium uppercase truncate max-w-[100px]">${b.customer}</td>
+                <td data-label="Delivery" class="px-4 py-4 text-xs font-bold ${dateColor}">${formattedDelivery}</td>
+                <td data-label="Subtotal" class="px-4 py-4 text-right">₹${b.subtotal}</td>
+                <td data-label="Advance" class="px-4 py-4 text-right font-bold text-indigo-600">₹${b.advance || 0}</td>
+                <td data-label="Balance Due" class="px-4 py-4 text-right font-black ${balanceColor}">
+                    ${balanceText}
+                </td>
+                <td class="px-4 py-4 text-center">
+                    <div class="action-dropdown">
+                        <button onclick="toggleDropdown(event, ${i})" class="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-200">
+                            Action
+                        </button>
+                        <div id="dropdown-${i}" class="dropdown-menu">
+                            <button onclick="closeAllDropdowns();showInfo(${i})" class="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50 border-b">Details</button>
+                            <button onclick="closeAllDropdowns();openEditModal(${i})" class="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase text-indigo-600 hover:bg-indigo-50 border-b">Edit / Pay</button>
+                            <button onclick="closeAllDropdowns();printSavedBill(${i})" class="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase text-emerald-600 hover:bg-emerald-50 border-b">Print</button>
+                            <button onclick="closeAllDropdowns();deleteBill('${b.id}')" class="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase text-rose-600 hover:bg-rose-50">Delete</button>
+                        </div>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+    } catch (err) { console.error("Could not load bills."); }
+}
+
+    async function showInfo(index) {
+        const b = currentSavedBills[index];
+        const body = document.getElementById('modalBody');
+        
+        let historyHtml = `
+            <div class="mt-8 border-t border-slate-100 pt-6">
+                <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                    <span class="w-2 h-2 bg-red-600 rounded-full"></span>
+                    Activity Log
+                </h4>
+                <div class="space-y-0 border-l-2 border-slate-100 ml-2">`;
+
+        try {
+            const hRes = await fetch(`/api/bills/${b.id}/history`);
+            const history = await hRes.json();
+            
+            if(history.length > 0) {
+                historyHtml += history.map(h => `
+                    <div class="relative pl-6 pb-6 group">
+                        <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full border-4 border-white bg-slate-300 group-hover:bg-red-600 transition-colors shadow-sm"></div>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase mb-1">${h.edit_date}</span>
+                            <div class="bg-white border border-slate-200 rounded-lg p-3 hover:border-red-200 hover:shadow-sm transition-all">
+                                <p class="text-xs text-slate-600 leading-relaxed">${h.change_log}</p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                historyHtml += `<div class="pl-6 pb-4"><p class="text-xs text-slate-400 italic">No modifications found.</p></div>`;
+            }
+        } catch (e) { 
+            historyHtml += '<p class="text-xs text-red-500 pl-6">Unable to sync logs.</p>'; 
+        }
+        
+        historyHtml += `</div></div>`;
+
+        body.innerHTML = `
+            <div class="space-y-6">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">Customer</p>
+                        <p class="text-sm font-bold uppercase text-slate-900">${b.customer}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">Phone</p>
+                        <p class="text-sm font-semibold text-slate-700">${b.phone || 'N/A'}</p>
+                    </div>
+                </div>
+                <div class="bg-indigo-50/50 p-4 rounded-xl space-y-2 border border-indigo-100">
+                    <p class="text-[10px] text-indigo-400 font-black uppercase mb-2">Itemized List</p>
+                    ${b.items.map(it => `
+                        <div class="flex justify-between text-xs uppercase tracking-tight">
+                            <span class="text-slate-600">${it.name} <span class="text-slate-400 text-[10px]">x${it.quantity}</span></span>
+                            <b class="text-slate-900">₹${fmt(it.price * it.quantity)}</b>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="border-t border-slate-100 pt-4">
+                    <div class="flex justify-between items-center text-lg font-black uppercase">
+                        <span class="text-slate-500 text-sm">Balance Due</span>
+                        <span class="text-indigo-600">₹${fmt(b.total || 0)}</span>
+                    </div>
+                </div>
+                <div class="pt-2">${historyHtml}</div>
+            </div>`;
+        document.getElementById('infoModal').classList.remove('hidden');
+    }
+
+    function openEditModal(index) {
+        const b = currentSavedBills[index];
+        const body = document.getElementById('editModalBody');
+        b.originalAdvance = parseFloat(b.advance || 0);
+
+        body.innerHTML = `
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <p class="text-[10px] font-black text-red-600 uppercase tracking-widest">Edit: ${b.id}</p>
+                    <span class="text-[10px] px-2 py-1 bg-slate-100 rounded text-slate-500 font-bold uppercase">${formatDateDDMMYYYY(b.date)}</span>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase">Delivery Date</label>
+                        <input id="updDate" type="date" value="${b.deliveryDate || ''}" class="w-full border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-red-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 mb-1 uppercase">Delivery Time</label>
+                        <input id="updTime" type="time" value="${b.deliveryTime || ''}" class="w-full border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-red-500">
+                    </div>
+                </div>
+                <div class="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+                    <label class="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-tight">Payment Status</label>
+                    <div class="flex items-center gap-3">
+                        <div class="flex-1">
+                            <span class="text-[9px] text-slate-400 uppercase font-bold">Total Advance Paid</span>
+                            <input id="updAdvance" type="number" value="${b.originalAdvance}" class="w-full border-none p-0 text-lg font-black text-slate-900 focus:ring-0" placeholder="0.00">
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[9px] text-slate-400 uppercase font-bold">Bill Total</span>
+                            <p class="text-lg font-black text-slate-400">₹${fmt(parseFloat(b.subtotal) - parseFloat(b.discount || 0))}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+
+        document.getElementById('markPaidBtn').onclick = () => { 
+            const totalBill = parseFloat(b.subtotal) - parseFloat(b.discount || 0); 
+            document.getElementById('updAdvance').value = totalBill.toFixed(2); 
+        };
+        document.getElementById('saveEditBtn').onclick = () => updateRecord(index);
+        document.getElementById('editModal').classList.remove('hidden');
+    }
+async function updateRecord(index) {
+    let b = currentSavedBills[index];
+    
+    // Ensure we are using the MongoDB _id
+    const mongoId = b._id; 
+    
+    // Gather values from inputs
+    const newDate = document.getElementById('updDate').value;
+    const newTime = document.getElementById('updTime').value;
+    const newTotalAdv = document.getElementById('updAdvance').value;
+    const newBalance = parseFloat(b.subtotal) - parseFloat(b.discount || 0) - parseFloat(newTotalAdv);
+
+    try {
+        const response = await fetch(`/api/bills/${mongoId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                deliveryDate: newDate,
+                deliveryTime: newTime,
+                advance: newTotalAdv,
+                total: fmt(newBalance)
+            })
+        });
+        
+        if(response.ok) { 
+            alert("Record updated successfully!");
+            await loadSavedBills(); 
+            closeModal('editModal'); 
+        } else {
+            alert("Update failed. Check server console.");
+        }
+    } catch (err) { console.error("Update error:", err); }
+}
+
+    function populatePrintArea(b) {
+        document.getElementById('pBillNo').innerText = "BILL: " + b.id;
+        document.getElementById('pDate').innerText = "DATE: " + formatDateDDMMYYYY(b.date);
+        document.getElementById('pCustomer').innerText = "CUSTOMER: " + b.customer;
+        document.getElementById('pPhone').innerText = "PHONE: " + (b.phone || "N/A");
+        document.getElementById('pAddress').innerText = "ADDRESS: " + (b.address || "N/A");
+        document.getElementById('pDeliveryDate').innerText = b.deliveryDate ? "DELIVERY DATE: " + formatDateDDMMYYYY(b.deliveryDate) : "";
+        document.getElementById('pDeliveryTime').innerText = b.deliveryTime ? "DELIVERY TIME: " + formatTime12H(b.deliveryTime) : "";
+        document.getElementById('pSubtotal').innerText = b.subtotal;
+        document.getElementById('pDiscount').innerText = fmt(b.discount || 0);
+        document.getElementById('pAdvance').innerText = fmt(b.advance || 0);
+        document.getElementById('pTotal').innerText = fmt(b.total || 0);
+        document.getElementById('pItems').innerHTML = b.items.map(i => `<div style="display:flex;"><div style="width:50%; text-transform: uppercase;">${i.name} x${i.quantity}</div><div style="width:20%; text-align:center;">${i.quantity}</div><div style="width:30%; text-align:right;">₹${fmt(i.price * i.quantity)}</div></div>`).join('');
+    }
+
+    function printThermal() { if(billItems.length === 0) return alert("Add items first"); populatePrintArea(getCurrentBillObj()); executePrint(); }
+    function printSavedBill(index) { populatePrintArea(currentSavedBills[index]); executePrint(); }
+    
+    function executePrint() { 
+        const win = window.open('', '', 'width=400,height=600'); 
+        win.document.write('<html><head><style>@media print { body { margin: 0; } }</style></head><body>' + document.getElementById('printArea').innerHTML + '</body></html>'); 
+        win.document.close(); 
+        setTimeout(() => { win.print(); win.close(); }, 500); 
+    }
+
+    function clearBill() {
+        billItems = []; document.getElementById('customerName').value = ""; document.getElementById('customerPhone').value = ""; document.getElementById('customerAddress').value = ""; document.getElementById('deliveryDate').value = ""; document.getElementById('deliveryTime').value = ""; document.getElementById('discount').value = 0; document.getElementById('advance').value = 0; fetchNewBillId(); document.getElementById('billNumber').value = genBillId(); renderBillItems();
+    }
+
+    async function deleteBill(billId) {
+        if(confirm("Delete this transaction permanently?")) {
+            const response = await fetch(`/api/bills/${billId}`, { method: 'DELETE' });
+            if (response.ok) { loadSavedBills(); }
+        }
+    }
+
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+    function logout() { localStorage.removeItem("fruitz_session"); window.location.href = "login.html"; }
+
+   // ... existing scripts ...
+
+    window.onload = () => { 
+        updateTime(); 
+        fetchMenuFromDB(); 
+        loadSavedBills(); 
+        fetchNewBillId();
+    };
+
+    // New shortcut listener
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'F1') {
+            event.preventDefault();
+            clearBill();
+        }
+    });
+</script>
+  </script>
+</body>
+</html>
