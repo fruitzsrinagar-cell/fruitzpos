@@ -232,7 +232,7 @@
   </div>
 
   <div id="printArea" class="hidden">
-    <div style="width:58mm; padding:6px 6px 10px; font-family:monospace; font-size:12px; color: #000;">
+    <div style="width:58mm;max-width: 58mm; overflow: hidden; padding:6px 6px 10px; font-family:monospace; font-size:12px; color: #000;">
       <div style="text-align:center; font-weight:900; font-size:24px;">FRUIT’Z</div>
       <div style="text-align:center; font-size:11px; font-style: italic;">For Your Wellbeing</div>
       <div style="text-align:center; font-size:11px;">FSSIC NO : 24552365210253</div>
@@ -702,11 +702,36 @@ async function updateRecord(index) {
     function printSavedBill(index) { populatePrintArea(currentSavedBills[index]); executePrint(); }
     
     function executePrint() { 
-        const win = window.open('', '', 'width=400,height=600'); 
-        win.document.write('<html><head><style>@media print { body { margin: 0; } }</style></head><body>' + document.getElementById('printArea').innerHTML + '</body></html>'); 
-        win.document.close(); 
-        setTimeout(() => { win.print(); win.close(); }, 500); 
-    }
+    const win = window.open('', '', 'width=58mm,height=600'); 
+    const content = document.getElementById('printArea').innerHTML;
+
+    win.document.write('<html><head><title>Print Receipt</title>');
+    win.document.write('<style>');
+    win.document.write(`
+        @page { size: 58mm auto; margin: 0; }
+        body { 
+            margin: 0; 
+            padding: 5px; 
+            width: 58mm; 
+            font-family: 'Courier New', Courier, monospace; 
+            font-size: 12px;
+        }
+        * { box-sizing: border-box; }
+        img { max-width: 100%; }
+    `);
+    win.document.write('</style></head><body>');
+    win.document.write(content);
+    win.document.write('</body></html>');
+    
+    win.document.close(); 
+    
+    // Give the browser more time to render the 58mm layout
+    setTimeout(() => { 
+        win.focus();
+        win.print(); 
+        win.close(); 
+    }, 1000); 
+}
 
     function clearBill() {
         billItems = []; document.getElementById('customerName').value = ""; document.getElementById('customerPhone').value = ""; document.getElementById('customerAddress').value = ""; document.getElementById('deliveryDate').value = ""; document.getElementById('deliveryTime').value = ""; document.getElementById('discount').value = 0; document.getElementById('advance').value = 0; fetchNewBillId(); document.getElementById('billNumber').value = genBillId(); renderBillItems();
