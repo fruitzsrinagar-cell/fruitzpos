@@ -5,121 +5,157 @@
     async function checkAuth() {
         try {
             const response = await fetch('/api/current-user');
-            if (!response.ok) {
-                // If the server returns 401 (Not logged in), redirect
-                window.location.href = "login.html";
-            }
-        } catch (err) {
-            window.location.href = "login.html";
-        }
+            if (!response.ok) window.location.href = "login.html";
+        } catch (err) { window.location.href = "login.html"; }
     }
-
-    // Run this check immediately
     checkAuth();
-</script>
+    </script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fruit’z | Vibrant Dispatch</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+    <title>Fruit’z | Today's Dispatch</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #f5f5f5; }
-        .glass-modal { background: rgba(255, 255, 255, 0.98); }
-        .card-shadow { box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #ffffff; -webkit-tap-highlight-color: transparent; }
+        .date-separator { background-color: #f8fafc; color: #94a3b8; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; padding: 12px 20px; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; }
+        .table-row-hover:hover { background-color: #fcfcfc; cursor: pointer; }
+        @media print { .no-print { display: none !important; } }
     </style>
 </head>
-<body class="p-4 md:p-12 font-sans">
+<body class="bg-white">
+
+<div class="max-w-6xl mx-auto no-print pb-24">
+    <header class="flex items-center justify-between p-6 md:px-0">
+        <div class="flex items-center gap-4">
+            <button onclick="window.history.back()" class="text-slate-900">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+            </button>
+            <h1 class="text-lg md:text-2xl font-extrabold text-slate-900">Daily Dispatches</h1>
+        </div>
+        <div class="hidden md:flex items-center gap-2 bg-green-50 px-4 py-2 rounded-xl">
+            <span id="orderCount" class="text-green-600 font-black text-sm">0 Orders Today</span>
+        </div>
+    </header>
+
+    <div id="mobileListView" class="md:hidden divide-y divide-slate-50">
+        </div>
+
+    <div class="hidden md:block overflow-hidden border border-slate-100 rounded-3xl shadow-sm">
+        <table class="w-full text-left">
+            <thead class="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                <tr>
+                    <th class="px-8 py-5">Source</th>
+                    <th class="px-8 py-5">Order ID</th>
+                    <th class="px-8 py-5">Customer / Address</th>
+                    <th class="px-8 py-5">Status</th>
+                    <th class="px-8 py-5 text-right">Total</th>
+                    <th class="px-8 py-5 text-center">Action</th>
+                </tr>
+            </thead>
+            <tbody id="laptopTableBody" class="divide-y divide-slate-50">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-8 py-3 flex justify-between items-center no-print">
+    <div class="flex flex-col items-center gap-1 text-slate-300" onclick="window.location.href='homepage.html'">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+        <span class="text-[10px] font-bold uppercase tracking-tighter">Dashboard</span>
+    </div>
+    <div class="flex flex-col items-center gap-1 text-green-600">
+        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/><path d="M14 17H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+        <span class="text-[10px] font-bold uppercase tracking-tighter">Orders</span>
+    </div>
+    <div class="flex flex-col items-center gap-1 text-slate-300" onclick="window.location.href='viewbills.html'">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012-2"></path></svg>
+        <span class="text-[10px] font-bold uppercase tracking-tighter">History</span>
+    </div>
+</div>
+
+<script>
+let currentOrders = [];
+const fmt = (n) => parseFloat(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+
+function formatGroupHeader(dateString) {
+    const d = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return "TODAY";
+    if (d.toDateString() === yesterday.toDateString()) return "YESTERDAY";
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }).toUpperCase();
+}
+
+async function loadOrders() {
+    const mobileCont = document.getElementById('mobileListView');
+    const laptopCont = document.getElementById('laptopTableBody');
     
-    <div class="max-w-5xl mx-auto">
-        <button onclick="window.history.back()" class="flex items-center text-slate-500 hover:text-rose-600 transition-colors mb-6 font-bold uppercase tracking-widest text-[10px]">
-            ← Go Back
-        </button>
+    try {
+        const res = await fetch('/api/bills');
+        const allData = await res.json();
+        
+        // Filter: only orders with a deliveryDate (Dispatch items)
+        currentOrders = allData.filter(o => o.deliveryDate);
+        // Sort: Most recent first
+        currentOrders.sort((a,b) => new Date(b.deliveryDate) - new Date(a.deliveryDate));
 
-        <div class="mb-10">
-            <h1 class="text-2xl font-extrabold text-slate-900 tracking-tighter">Today's orders</h1>
-        </div>
+        document.getElementById('orderCount').textContent = `${currentOrders.length} Total Dispatches`;
+        mobileCont.innerHTML = '';
+        laptopCont.innerHTML = '';
 
-        <div id="todayOrdersGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-    </div>
+        let currentGroup = "";
 
-    <div id="orderModal" class="hidden fixed inset-0 flex items-center justify-center p-4 z-50">
-        <div class="absolute inset-0 bg-slate-900/10 backdrop-blur-sm" onclick="closeModal()"></div>
-        <div class="glass-modal relative w-full max-w-md rounded-3xl p-8 card-shadow border border-slate-200">
-            <h2 id="modalCustomer" class="text-2xl font-black text-slate-900 mb-6"></h2>
-            <div id="modalDetails" class="space-y-6"></div>
-            <button onclick="closeModal()" class="mt-8 w-full py-3 bg-slate-900 text-white rounded-xl font-bold uppercase text-xs">Close</button>
-        </div>
-    </div>
+        currentOrders.forEach(o => {
+            const groupName = formatGroupHeader(o.deliveryDate);
+            const isZomato = (o.customer || "").toLowerCase().includes("zomato");
+            const iconUrl = isZomato ? "https://upload.wikimedia.org/wikipedia/commons/7/75/Zomato_logo.png" : "https://via.placeholder.com/40";
+            const timeStr = o.deliveryTime || "ASAP";
 
-    <script>
-        let currentOrders = [];
-        const colors = ['bg-rose-500', 'bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-violet-500'];
-
-        async function loadTodayOrders() {
-            const container = document.getElementById('todayOrdersGrid');
-            try {
-                const response = await fetch('/api/bills');
-                currentOrders = await response.json();
-                const today = new Date().toDateString();
-                
-                container.innerHTML = currentOrders
-                    .filter(o => o.deliveryDate && new Date(o.deliveryDate).toDateString() === today)
-                    .map((order, index) => {
-                        const color = colors[index % colors.length];
-                        return `
-                            <div onclick="openModal('${order.id}')" class="bg-white p-6 rounded-3xl card-shadow cursor-pointer border border-slate-200 hover:scale-[1.02] transition-all">
-                                <div class="${color} h-2 w-20 rounded-full mb-4"></div>
-                                <h3 class="font-black text-lg text-slate-900">${order.customer}</h3>
-                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wide">${order.phone || 'No Phone'}</p>
-                                
-                                <div class="mt-4 text-[10px] text-slate-500 font-medium italic border-b pb-2 mb-3">
-                                    ${order.address || 'No Address'}
-                                </div>
-                                <div class="space-y-1">
-                                    ${order.items.slice(0, 3).map(i => `
-                                        <div class="flex justify-between text-[11px] font-bold text-slate-700">
-                                            <span>${i.name}</span>
-                                            <span class="text-rose-500">x${i.quantity}</span>
-                                        </div>
-                                    `).join('')}
-                                    ${order.items.length > 3 ? '<div class="text-[10px] text-slate-400 italic">...and more</div>' : ''}
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
-            } catch (e) { console.error(e); }
-        }
-
-        // ... (openModal and closeModal functions stay the same)
-        function openModal(id) {
-            const order = currentOrders.find(o => o.id == id);
-            document.getElementById('modalCustomer').innerText = order.customer;
-            document.getElementById('modalDetails').innerHTML = `
-                <div>
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Phone</p>
-                    <p class="text-sm font-black text-blue-600">${order.phone || 'N/A'}</p>
-                </div>
-                <div>
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Address</p>
-                    <p class="text-sm font-semibold text-slate-700">${order.address || 'Not provided'}</p>
-                </div>
-                <div class="space-y-2">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Order Items</p>
-                    ${order.items.map(i => `
-                        <div class="flex justify-between items-center bg-slate-50 p-3 rounded-2xl border-l-4 border-emerald-500">
-                            <span class="text-xs font-bold text-slate-700">${i.name}</span>
-                            <span class="text-xs font-black text-emerald-600">x${i.quantity}</span>
+            // 1. Mobile List
+            if (groupName !== currentGroup) {
+                currentGroup = groupName;
+                mobileCont.innerHTML += `<div class="date-separator">${groupName}</div>`;
+            }
+            mobileCont.innerHTML += `
+                <div onclick="window.location.href='viewdetailedbill.html?id=${o.id}'" class="flex items-center justify-between p-5 bg-white border-b border-slate-50">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100">
+                            <img src="${iconUrl}" class="w-7">
                         </div>
-                    `).join('')}
-                </div>
-            `;
-            document.getElementById('orderModal').classList.remove('hidden');
-        }
+                        <div>
+                            <div class="font-extrabold text-slate-900 text-sm leading-tight">${o.customer}</div>
+                            <div class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">#${o.id}</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-black text-blue-600 text-sm">₹${fmt(o.total)}</div>
+                        <div class="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">${timeStr}</div>
+                    </div>
+                </div>`;
 
-        function closeModal() {
-            document.getElementById('orderModal').classList.add('hidden');
-        }
+            // 2. Laptop Table
+            laptopCont.innerHTML += `
+                <tr class="table-row-hover group" onclick="window.location.href='viewdetailedbill.html?id=${o.id}'">
+                    <td class="px-8 py-5 text-[11px] font-bold text-slate-400 uppercase tracking-widest">${isZomato ? '🛵 Zomato' : '👤 Direct'}</td>
+                    <td class="px-8 py-5 font-black text-blue-600 text-xs">#${o.id}</td>
+                    <td class="px-8 py-5">
+                        <div class="font-bold text-slate-900 uppercase text-sm">${o.customer}</div>
+                        <div class="text-[10px] text-slate-400 font-medium truncate w-48 italic">"${o.address || 'No Address'}"</div>
+                    </td>
+                    <td class="px-8 py-5"><span class="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-wider">${timeStr}</span></td>
+                    <td class="px-8 py-5 text-right font-black text-slate-900 text-base">₹${fmt(o.total)}</td>
+                    <td class="px-8 py-5 text-center">
+                        <div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-50 text-slate-300 group-hover:bg-blue-600 group-hover:text-white transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </div>
+                    </td>
+                </tr>`;
+        });
+    } catch(e) { console.error(e); }
+}
 
-        window.addEventListener('DOMContentLoaded', loadTodayOrders);
-    </script>
+window.addEventListener('DOMContentLoaded', loadOrders);
+</script>
 </body>
 </html>
