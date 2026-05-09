@@ -174,34 +174,8 @@ async function loadSavedBills() {
 }
 
 function viewBillDetails(id) {
-  const b = allBills.find(x => String(x.id) === String(id));
-  document.getElementById('modalContent').innerHTML = `
-    <div class="flex justify-between items-center mb-6">
-        <h3 class="text-lg font-black text-blue-600 uppercase">Bill Summary</h3>
-        <button onclick="closeModal()" class="text-slate-400 text-xl">✕</button>
-    </div>
-    <div class="grid grid-cols-2 gap-4 text-[10px] font-bold uppercase text-slate-400 mb-6">
-        <div>Bill No<p class="text-slate-900 text-sm tracking-tight">${String(b.id).toUpperCase()}</p></div>
-        <div>Date<p class="text-slate-900 text-sm tracking-tight">${formatDisplayDate(b.date)}</p></div>
-        <div class="col-span-2 border-t pt-2 mt-2">Customer<p class="text-slate-900 text-sm tracking-tight">${(b.customer || "Walk-in").toUpperCase()}</p></div>
-    </div>
-    <div class="custom-scrollbar max-h-60 overflow-y-auto divide-y divide-slate-100 border-t border-b">
-        ${b.items.map(it => `
-            <div class="flex justify-between py-3 text-sm">
-                <div>
-                    <span class="font-bold text-slate-900">${it.name}</span>
-                    <p class="text-xs text-slate-400">Qty: ${it.qty}</p>
-                </div>
-                <span class="font-bold text-slate-900">₹${fmt(it.price * it.qty)}</span>
-            </div>`).join('')}
-    </div>
-    <div class="mt-6 text-2xl font-black flex justify-between items-center">
-        <span class="text-sm text-slate-400 uppercase">Total Payable</span>
-        <span class="text-green-600">₹${fmt(b.total)}</span>
-    </div>
-    <button onclick="printSpecificBill('${b.id}')" class="w-full mt-6 bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-blue-600 transition">Print Receipt</button>
-  `;
-  document.getElementById('detailsModal').classList.remove('hidden');
+  // Redirects to the detailed page with the Bill ID in the URL
+  window.location.href = `viewdetailedbill.html?id=${id}`;
 }
 
 function printSpecificBill(id) {

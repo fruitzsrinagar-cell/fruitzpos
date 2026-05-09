@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    async function checkAuth() {
+        try {
+            const response = await fetch('/api/current-user');
+            if (!response.ok) window.location.href = "login.html";
+        } catch (err) {
+            window.location.href = "login.html";
+        }
+    }
+    checkAuth();
+  </script>
+  <meta charset="UTF-8" />
+  <title>Fruit’z | Bill Details</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; overflow-x: hidden; }
+    /* Scrollbar for items list to keep the main page static */
+    .items-scroll::-webkit-scrollbar { width: 4px; }
+    .items-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+    @media print { .no-print { display: none !important; } }
+    /* Desktop layout adjustment */
+    @media (min-width: 1024px) {
+        body { overflow: hidden; height: 100vh; }
+    }
+  </style>
+</head>
+<body class="bg-slate-50">
+
+<div class="max-w-[1200px] mx-auto no-print h-full flex flex-col">
+  
+  <header class="flex items-center justify-between p-4 lg:py-4">
+    <div class="flex items-center gap-4">
+      <a href="viewbills.html" class="text-slate-900 bg-white p-2 rounded-full shadow-sm">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+      </a>
+      <h1 class="text-lg font-bold text-slate-900">Bill Details</h1>
+    </div>
+    <div class="flex gap-2">
+        <button onclick="window.print()" class="hidden lg:flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-600 hover:bg-slate-50 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+            Print
+        </button>
+    </div>
+  </header>
+
+  <div id="billContent" class="px-4 flex-1 lg:grid lg:grid-cols-2 lg:gap-6 lg:overflow-hidden pb-24 lg:pb-6">
+    </div>
+
+  <div class="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-slate-100 flex gap-3">
+    <button class="flex-1 border border-slate-200 py-4 rounded-2xl font-bold text-slate-700 flex items-center justify-center gap-2 bg-white">
+        View / Share
+    </button>
+    <button onclick="window.print()" class="flex-1 bg-green-600 py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 shadow-lg shadow-green-200">
+        Print Bill
+    </button>
+  </div>
+</div>
+
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+const billId = urlParams.get('id');
+const fmt = (n) => parseFloat(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const d = String(date.getDate()).padStart(2, '0');
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const y = date.getFullYear();
+    const time = date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+    return `${d}-${m}-${y} • ${time}`;
+}
+
+async function fetchBill() {
+    if(!billId) return;
+    try {
+        const res = await fetch(`/api/bills/${billId}`);
+        const b = await res.json();
+        
+        const isZomato = (b.customer || "").toLowerCase().includes("zomato");
+        const sourceIcon = isZomato ? "https://upload.wikimedia.org/wikipedia/commons/7/75/Zomato_logo.png" : "https://via.placeholder.com/40";
+
+        document.getElementById('billContent').innerHTML = `
+            <div class="space-y-4 lg:flex lg:flex-col">
+                <div class="bg-white p-4 rounded-[1.5rem] border border-slate-100 flex items-center justify-between shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <img src="${sourceIcon}" class="w-10 h-10 rounded-xl object-contain bg-slate-50 p-1">
+                        <div>
+                            <h2 class="font-bold text-slate-900 text-sm">${b.customer || "Walk-in"} Order</h2>
+                            <p class="text-[10px] text-slate-400 font-medium tracking-tight uppercase">#${b.id}</p>
+                        </div>
+                    </div>
+                    <span class="px-2 py-1 rounded-lg bg-green-50 text-green-600 text-[9px] font-black uppercase tracking-wider">Paid</span>
+                </div>
+
+                <div class="bg-white rounded-[1.5rem] border border-slate-100 grid grid-cols-2 divide-x divide-slate-50 shadow-sm">
+                    <div class="p-4">
+                        <p class="text-[9px] font-bold text-slate-400 uppercase mb-1">Total Amount</p>
+                        <p class="text-xl font-black text-green-600">₹${fmt(b.total)}</p>
+                    </div>
+                    <div class="p-4">
+                        <p class="text-[9px] font-bold text-slate-400 uppercase mb-1">Date & Time</p>
+                        <p class="text-[11px] font-bold text-slate-900">${formatDate(b.date)}</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-[1.5rem] border border-slate-100 shadow-sm flex-1">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Customer Info</h3>
+                    <div class="grid grid-cols-2 gap-y-4">
+                        <div><p class="text-[9px] text-slate-400">Name</p><p class="text-xs font-bold text-slate-900">${b.customer || "Walk-in"}</p></div>
+                        <div><p class="text-[9px] text-slate-400">Order ID</p><p class="text-xs font-bold text-slate-900">${b.orderId || 'N/A'}</p></div>
+                        <div><p class="text-[9px] text-slate-400">Payment</p><p class="text-xs font-bold text-slate-900">${isZomato ? 'Zomato' : 'Cash'}</p></div>
+                        <div><p class="text-[9px] text-slate-400">Status</p><p class="text-xs font-bold text-green-600">Paid ✓</p></div>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-slate-50">
+                        <h3 class="text-[10px] font-black text-slate-400 uppercase mb-2">Notes</h3>
+                        <p class="text-xs font-bold text-slate-700">Thank you! Visit Again 😊</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 lg:mt-0 bg-white p-5 rounded-[1.5rem] border border-slate-100 shadow-sm flex flex-col lg:h-full lg:overflow-hidden">
+                <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Bill Items</h3>
+                <div class="items-scroll flex-1 overflow-y-auto pr-2 space-y-4">
+                    ${b.items.map((item, index) => `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-bold text-slate-900">${index + 1}. ${item.name}</p>
+                            <p class="text-[9px] text-slate-400">${item.qty} x ₹${fmt(item.price)}</p>
+                        </div>
+                        <p class="text-xs font-bold text-slate-900">₹${fmt(item.qty * item.price)}</p>
+                    </div>`).join('')}
+                </div>
+                
+                <div class="border-t border-dashed border-slate-100 pt-4 mt-4 space-y-2">
+                    <div class="flex justify-between text-xs font-bold"><span class="text-slate-400">Subtotal</span><span class="text-slate-900">₹${fmt(b.total)}</span></div>
+                    <div class="flex justify-between text-xs font-bold"><span class="text-slate-400">Discount</span><span class="text-red-500">- ₹0.00</span></div>
+                    <div class="flex justify-between pt-2 border-t mt-2"><span class="text-xs font-black text-slate-900 uppercase">Grand Total</span><span class="text-lg font-black text-green-600">₹${fmt(b.total)}</span></div>
+                </div>
+            </div>
+        `;
+    } catch (e) { console.error(e); }
+}
+fetchBill();
+</script>
+</body>
+</html>

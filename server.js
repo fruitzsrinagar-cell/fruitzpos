@@ -207,17 +207,23 @@ app.get('/api/bills', async (req, res) => {
         res.json(bills);
     } catch (err) { res.status(500).send(err); }
 });
-// Add this route to server.js
-app.get('/api/current-user', async (req, res) => {
-    if (req.session && req.session.user) {
-        const user = await User.findOne({ username: req.session.user });
-
-        res.json({
-            username: user.username,
-            role: user.role
-        });
-    } else {
-        res.status(401).json({ error: "Not logged in" });
+// Add this to your Node.js/Express backend
+app.get('/api/bills/:id', async (req, res) => {
+    try {
+        const billId = req.params.id;
+        console.log("Searching for Bill ID:", billId); // This will show in your terminal
+        
+        const bill = await Bill.findOne({ id: billId }); 
+        
+        if (!bill) {
+            console.log("Bill not found in Database");
+            return res.status(404).json({ message: "Bill not found" });
+        }
+        
+        res.json(bill);
+    } catch (err) {
+        console.error("Database Error:", err.message);
+        res.status(500).json({ error: err.message });
     }
 });
 app.post('/api/bills', async (req, res) => {
