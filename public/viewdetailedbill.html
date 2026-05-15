@@ -41,7 +41,7 @@
       <h1 class="text-lg font-bold text-slate-900">Bill Details</h1>
     </div>
     <div class="flex gap-2">
-        <button onclick="window.print()" class="hidden lg:flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-600 hover:bg-slate-50 transition">
+        <button onclick="executePrint()" class="hidden lg:flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-600 hover:bg-slate-50 transition">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
             Print
         </button>
@@ -55,9 +55,9 @@
     <button class="flex-1 border border-slate-200 py-4 rounded-2xl font-bold text-slate-700 flex items-center justify-center gap-2 bg-white">
         View / Share
     </button>
-    <button onclick="window.print()" class="flex-1 bg-green-600 py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 shadow-lg shadow-green-200">
-        Print Bill
-    </button>
+   <button onclick="executePrint()" class="flex-1 bg-green-600 py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 shadow-lg shadow-green-200">
+    Print Bill
+</button>
   </div>
 </div>
 
@@ -74,12 +74,113 @@ function formatDate(dateString) {
     const time = date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
     return `${d}-${m}-${y} • ${time}`;
 }
+let currentBillData = null; // Global variable to store fetched bill
 
+function formatDateDDMMYYYY(dateInput) {
+    if (!dateInput) return "-";
+    const d = new Date(dateInput);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dd}-${mm}-${yyyy}`;
+}
+
+function formatTime12H(timeStr) {
+    if (!timeStr) return "";
+    if (!timeStr.includes(':')) return timeStr; // Handle already formatted time
+    const [hours, minutes] = timeStr.split(':');
+    const h = parseInt(hours);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${minutes} ${ampm}`;
+}
+
+function populatePrintArea(b) {
+    const formatFmt = (n) => Number(n).toFixed(2);
+    document.getElementById('pBillNo').innerText = "BILL: " + b.id;
+    document.getElementById('pDate').innerText = "DATE: " + formatDateDDMMYYYY(b.date);
+    document.getElementById('pCustomer').innerText = "CUSTOMER: " + b.customer;
+    document.getElementById('pPhone').innerText = "PHONE: " + (b.phone || "N/A");
+    document.getElementById('pAddress').innerText = "ADDRESS: " + (b.address || "N/A");
+    document.getElementById('pDeliveryDate').innerText = b.deliveryDate ? "DELIVERY DATE: " + formatDateDDMMYYYY(b.deliveryDate) : "";
+    document.getElementById('pDeliveryTime').innerText = b.deliveryTime ? "DELIVERY TIME: " + formatTime12H(b.deliveryTime) : "";
+    document.getElementById('pSubtotal').innerText = b.subtotal;
+    document.getElementById('pDiscount').innerText = formatFmt(b.discount || 0);
+    document.getElementById('pAdvance').innerText = formatFmt(b.advance || 0);
+    document.getElementById('pTotal').innerText = formatFmt(b.total || 0);
+    document.getElementById('pItems').innerHTML = b.items.map(i => `
+        <div style="display:flex;">
+            <div style="width:50%; text-transform: uppercase;">${i.name}</div>
+            <div style="width:20%; text-align:center;">${i.quantity || i.qty}</div>
+            <div style="width:30%; text-align:right;">₹${formatFmt((i.price) * (i.quantity || i.qty))}</div>
+        </div>`).join('');
+}
+
+function executePrint() {
+    if (!currentBillData) {
+        alert("Bill data not loaded");
+        return;
+    }
+
+    populatePrintArea(currentBillData);
+
+    const printContent = document.getElementById('printArea').innerHTML;
+
+    const win = window.open('', '_blank', 'width=400,height=600');
+
+    win.document.write(`
+        <html>
+        <head>
+            <title>Thermal Print</title>
+            <style>
+                body{
+                    margin:0;
+                    padding:0;
+                    font-family: monospace;
+                    width:58mm;
+                    color:#000;
+                }
+
+                *{
+                    box-sizing:border-box;
+                }
+
+                hr{
+                    border:none;
+                    border-top:1px dashed #000;
+                    margin:6px 0;
+                }
+
+                @media print{
+                    body{
+                        width:58mm;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            ${printContent}
+        </body>
+        </html>
+    `);
+
+    win.document.close();
+
+    win.onload = function () {
+        win.focus();
+
+        setTimeout(() => {
+            win.print();
+            win.close();
+        }, 500);
+    };
+}
 async function fetchBill() {
     if(!billId) return;
     try {
         const res = await fetch(`/api/bills/${billId}`);
         const b = await res.json();
+        currentBillData = b; // Store for printing
         
         const isZomato = (b.customer || "").toLowerCase().includes("zomato");
         const sourceIcon = isZomato ? "https://upload.wikimedia.org/wikipedia/commons/7/75/Zomato_logo.png" : "https://via.placeholder.com/40";
@@ -112,14 +213,11 @@ async function fetchBill() {
                     <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Customer Info</h3>
                     <div class="grid grid-cols-2 gap-y-4">
                         <div><p class="text-[9px] text-slate-400">Name</p><p class="text-xs font-bold text-slate-900">${b.customer || "Walk-in"}</p></div>
-                        <div><p class="text-[9px] text-slate-400">Order ID</p><p class="text-xs font-bold text-slate-900">${b.orderId || 'N/A'}</p></div>
+                        <div><p class="text-[9px] text-slate-400">Order ID</p><p class="text-xs font-bold text-slate-900">${b.id}</p></div>
                         <div><p class="text-[9px] text-slate-400">Payment</p><p class="text-xs font-bold text-slate-900">${isZomato ? 'Zomato' : 'Cash'}</p></div>
                         <div><p class="text-[9px] text-slate-400">Status</p><p class="text-xs font-bold text-green-600">Paid ✓</p></div>
                     </div>
-                    <div class="mt-6 pt-4 border-t border-slate-50">
-                        <h3 class="text-[10px] font-black text-slate-400 uppercase mb-2">Notes</h3>
-                        <p class="text-xs font-bold text-slate-700">Thank you! Visit Again 😊</p>
-                    </div>
+                    
                 </div>
             </div>
 
@@ -147,5 +245,39 @@ async function fetchBill() {
 }
 fetchBill();
 </script>
+<div id="printArea" class="hidden">
+  <div style="width:58mm; padding:6px 6px 10px; font-family:monospace; font-size:12px; color: #000;">
+    <div style="text-align:center; font-weight:900; font-size:24px;">FRUIT’Z</div>
+    <div style="text-align:center; font-size:11px; font-style: italic;">For Your Wellbeing</div>
+    <div style="text-align:center; font-size:11px;">FSSIC NO : 24552365210253</div>
+    <div style="text-align:center; font-size:11px;">Batamaloo, Srinagar</div>
+    <div style="text-align:center; font-size:11px; font-weight: bold;">7006149827, 7889762496</div>
+    <hr style="border:1px solid #000; margin:6px 0;">
+    <div id="pBillNo" style="font-weight: bold;"></div>
+    <div id="pDate"></div>
+    <div id="pCustomer" style="text-transform: uppercase;"></div>
+    <div id="pPhone"></div>
+    <div id="pAddress" style="text-transform: uppercase;"></div>
+    <div id="pDeliveryDate" style="font-weight: bold;"></div>
+    <div id="pDeliveryTime" style="font-weight: bold;"></div>
+    <hr style="border:1px solid #000; margin:8px 0;">
+    <div style="display:flex; font-weight:bold;">
+      <div style="width:50%;">Item</div>
+      <div style="width:20%; text-align:center;">Qty</div>
+      <div style="width:30%; text-align:right;">Price</div>
+    </div>
+    <div id="pItems" style="margin-top:4px;"></div>
+    <hr style="border:1px solid #000; margin:6px 0;">
+    <div style="text-align:right;">Subtotal: ₹<span id="pSubtotal"></span></div>
+    <div style="text-align:right;">Discount: ₹<span id="pDiscount"></span></div>
+    <div style="text-align:right; font-weight:bold;">Advance Paid: ₹<span id="pAdvance"></span></div>
+    <div style="text-align:right; font-weight:900; font-size:14px; margin-top:2px;">
+      Balance: ₹<span id="pTotal"></span>
+    </div>
+    <hr style="border:1px solid #000; margin:6px 0;">
+    <div style="text-align:center; font-size:8px; font-weight:700; margin-bottom: 4px;">Also on swiggy | zomato</div>
+    <div style="text-align:center; font-size:10px; font-style: italic; border-top: 1px dotted #000; padding-top: 4px;">powdered by Fruit'z billing software</div>
+  </div>
+</div>
 </body>
 </html>
