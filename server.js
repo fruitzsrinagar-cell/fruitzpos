@@ -28,9 +28,15 @@ app.use(session({
 // 2. Serve Static Files
 app.use(express.static(path.join(__dirname, "public")));
 
-// 3. Specific Route for the Root (Home)
+// PASTE THIS NEW BLOCK INSTEAD:
+
+// 1. Main Home URL for customers (Loads your fruit baskets page)
 app.get('/', (req, res) => {
-  // This sends login.html when someone visits yoursite.com/
+  res.sendFile(path.join(__dirname, 'public', 'userhomepage.html'));
+});
+
+// 2. Staff URL to access the POS Login system
+app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
@@ -433,11 +439,11 @@ app.delete('/api/basket-items/:id', async (req, res) => {
 
 
 // 4. Catch-all Route (Keep this at the very BOTTOM of your routes)
+// CHANGE the catch-all block at the very bottom to look EXACTLY like this:
 app.use((req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'login.html'));
+    res.redirect('/');
 });
 
 app.listen(3000, '0.0.0.0', () => {
     console.log("Fruit'z Cloud Server is LIVE.");
-    console.log("3000/Createbill.html");
 });
