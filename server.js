@@ -55,6 +55,33 @@ mongoose.connect(mongoURI, {
 
 // --- SCHEMAS ---
 // --- SCHEMAS ---
+// --- PREMIUM BASKETS DRILLDOWN SCHEMA ---
+const BasketItemSchema = new mongoose.Schema({
+    tier: { 
+        type: String, 
+        required: true, 
+      
+    },
+    name: { 
+        type: String, 
+        required: true 
+    }, // The Level 3 Button title (e.g., "Eco Solo Pack", "Gourmet Picnic Special")
+    description: { 
+        type: String, 
+        required: true 
+    }, // The Level 4 text (e.g., "Includes 4 seasonal organic apples...")
+    price: { 
+        type: String, 
+        required: true 
+    } // The final Level 4 price (e.g., "$18.50")
+});
+
+// Create the model so the database can create a 'basketitems' collection
+const BasketItem = mongoose.model('BasketItem', BasketItemSchema);
+
+
+
+
 const BillSchema = new mongoose.Schema({
     id: String,
     date: { type: Date, default: Date.now },
@@ -362,6 +389,49 @@ app.patch('/api/users/:username', async (req, res) => {
         res.status(500).json({ error: "Update failed" });
     }
 });
+
+
+
+             // BasketItem
+
+// =================================================================
+// --- BASKET API ENDPOINTS FOR CLIENT HOME & ADMIN VIEW ---
+// =================================================================
+
+// 1. GET ALL BASKETS: This reads everything from your MongoDB basket collection
+app.get('/api/basket-items', async (req, res) => {
+    try {
+        const items = await BasketItem.find();
+        res.json(items); // Sends the items back as a clean list
+    } catch (err) { 
+        res.status(500).json({ error: "Could not fetch basket items from database" }); 
+    }
+});
+
+// 2. ADD A NEW BASKET OPTION: Receives form data from Admin Panel and saves it
+app.post('/api/basket-items', async (req, res) => {
+    try {
+        const newItem = new BasketItem(req.body);
+        await newItem.save(); // Saves it into MongoDB cloud
+        res.json({ success: true, item: newItem });
+    } catch (err) { 
+        res.status(500).json({ error: "Could not save the new basket item" }); 
+    }
+});
+
+// 3. DELETE A BASKET OPTION: Removes a variation instantly using its unique ID
+app.delete('/api/basket-items/:id', async (req, res) => {
+    try {
+        await BasketItem.findByIdAndDelete(req.params.id); // Looks up ID and deletes
+        res.json({ success: true, message: "Basket variation removed successfully" });
+    } catch (err) { 
+        res.status(500).json({ error: "Failed to delete the basket item" }); 
+    }
+});
+
+
+
+
 // 4. Catch-all Route (Keep this at the very BOTTOM of your routes)
 app.use((req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
