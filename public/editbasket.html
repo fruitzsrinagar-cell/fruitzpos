@@ -235,6 +235,84 @@
         .btn-delete:hover {
             color: #d92323;
         }
+
+        /* --- MOBILE FRIENDLY MEDIA BREAKPOINT --- */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 1px solid #e0e0e0;
+            }
+
+            .sidebar-brand {
+                justify-content: center;
+                padding: 1rem;
+                border-bottom: 1px solid #e0e0e0;
+            }
+
+            .sidebar-menu {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                padding: 0;
+            }
+
+            .menu-item {
+                padding: 0.75rem 1rem;
+                font-size: 0.9rem;
+            }
+
+            .menu-item:hover, .menu-item.active {
+                border-left: none;
+                border-bottom: 3px solid #d92323;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 1.25rem;
+                width: 100%;
+            }
+
+            .page-header {
+                text-align: center;
+                margin-bottom: 1.5rem;
+            }
+
+            .editor-card {
+                padding: 1.25rem;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .full-width {
+                grid-column: span 1;
+            }
+
+            .btn-save {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .item-list-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .btn-delete {
+                align-self: flex-end;
+                padding: 0.25rem;
+            }
+        }
     </style>
 </head>
 <body>
