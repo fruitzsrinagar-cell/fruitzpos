@@ -11,7 +11,9 @@ const app = express();
 const session = require('express-session');
 // To this:
 const MongoStore = require('connect-mongo').default;
-app.use(express.json());
+// Set body parser limits to handle custom basket image string payloads safely
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 // ...
 app.use(session({
     secret: '70061498279682371735iffa',
@@ -79,7 +81,11 @@ const BasketItemSchema = new mongoose.Schema({
     price: { 
         type: String, 
         required: true 
-    } // The final Level 4 price (e.g., "$18.50")
+    }, // The final Level 4 price (e.g., "$18.50")
+    image: { 
+        type: String, 
+        default: "" 
+    } // Base64 data string accessible anywhere
 });
 
 // Create the model so the database can create a 'basketitems' collection

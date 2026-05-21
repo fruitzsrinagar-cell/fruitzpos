@@ -576,7 +576,8 @@
                     basketData[item.tier].push({
                         name: item.name,
                         desc: item.description,
-                        price: item.price
+                        price: item.price,
+                        image: item.image // Pull the custom cloud string mapping asset
                     });
                 });
 
@@ -637,25 +638,27 @@
             itemsWrapper.innerHTML = '';
 
             // Filter down exclusively to the array matching the target tier selection key
-            if (basketData[tierCategoryName]) {
-                basketData[tierCategoryName].forEach(variantOption => {
-                    const card = document.createElement('div');
-                    card.className = 'product-card';
-                    
-                    card.innerHTML = `
-                        <img src="https://images.unsplash.com/photo-1606787366850-de6330128bfc?auto=format&fit=crop&w=500&q=80" alt="Basket Image" class="product-img">
-                        <div class="product-info">
-                            <span class="basket-tier-badge">${tierCategoryName}</span>
-                            <h4 style="margin-top: 0.5rem;">${variantOption.name}</h4>
-                            <p class="product-description">${variantOption.desc}</p>
-                            <div class="basket-price-tag">
-                                <span>${variantOption.price}</span>
-                            </div>
-                        </div>
-                    `;
-                    itemsWrapper.appendChild(card);
-                });
-            }
+           // Replace the hardcoded string inside basketData[tierCategoryName].forEach loop:
+basketData[tierCategoryName].forEach(variantOption => {
+    const card = document.createElement('div');
+    card.className = 'product-card';
+    
+    // Check if a custom image exists in data, otherwise drop back to fallback Unsplash asset
+    const displayImage = variantOption.image || "https://images.unsplash.com/photo-1606787366850-de6330128bfc?auto=format&fit=crop&w=500&q=80";
+    
+    card.innerHTML = `
+        <img src="${displayImage}" alt="${variantOption.name}" class="product-img">
+        <div class="product-info">
+            <span class="basket-tier-badge">${tierCategoryName}</span>
+            <h4 style="margin-top: 0.5rem;">${variantOption.name}</h4>
+            <p class="product-description">${variantOption.desc}</p>
+            <div class="basket-price-tag">
+                <span>${variantOption.price}</span>
+            </div>
+        </div>
+    `;
+    itemsWrapper.appendChild(card);
+});
             
             // Scroll adjustments to follow selection clean layout tracks
             setTimeout(() => {
