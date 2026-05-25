@@ -6,15 +6,12 @@
         try {
             const response = await fetch('/api/current-user');
             if (!response.ok) {
-                // If the server returns 401 (Not logged in), redirect
                 window.location.href = "login.html";
             }
         } catch (err) {
             window.location.href = "login.html";
         }
     }
-
-    // Run this check immediately
     checkAuth();
 </script>
   <meta charset="UTF-8" />
@@ -31,7 +28,6 @@
     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
     
-    /* Perfect Dropdown Positioning */
     .action-dropdown { position: relative; }
     .dropdown-menu { 
         display: none; 
@@ -47,7 +43,6 @@
     }
     .dropdown-menu.show { display: block; }
 
-    /* Mobile Card Styles for Transactions */
     @media (max-width: 1024px) {
         #transactionsTable thead { display: none; }
         #savedBillsList { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; padding: 1rem 0; }
@@ -267,16 +262,14 @@
   </div>
 
   <script>
-   const successSound = new Audio('success.mp3'); 
+    const successSound = new Audio('success.mp3'); 
 
-// Debugging: Check if the file loads
-successSound.addEventListener('error', (e) => {
-    console.error("Audio file failed to load. Check path:", e);
-});
+    successSound.addEventListener('error', (e) => {
+        console.error("Audio file failed to load. Check path:", e);
+    });
 
     let menu = []; 
     let billItems = [];
-    // let billCounter = parseInt(localStorage.getItem("billCounter") || "1", 10);
     let currentSavedBills = [];
 
     function fmt(n) { return Number(n).toFixed(2); }
@@ -298,15 +291,6 @@ successSound.addEventListener('error', (e) => {
         const h12 = h % 12 || 12;
         return `${h12}:${minutes} ${ampm}`;
     }
-
-    function updateTime() {
-        const d = new Date();
-        const topDate = document.getElementById('topDate');
-        const topTime = document.getElementById('topTime');
-        if(topDate) topDate.textContent = formatDateDDMMYYYY(d);
-        if(topTime) topTime.textContent = d.toLocaleTimeString();
-    }
-    setInterval(updateTime, 1000);
 
     async function fetchMenuFromDB() {
         try {
@@ -385,22 +369,19 @@ successSound.addEventListener('error', (e) => {
         else if (balance < 0) totalEl.className = "text-indigo-600";
         else totalEl.className = "text-emerald-600";
     }
+
     async function fetchNewBillId() {
-    try {
-        const response = await fetch('/api/next-bill-id');
-        
-        if (!response.ok) {
-            throw new Error('Server returned an error');
+        try {
+            const response = await fetch('/api/next-bill-id');
+            if (!response.ok) throw new Error('Server returned an error');
+            const data = await response.json();
+            document.getElementById('billNumber').value = data.billId;
+        } catch (err) {
+            console.error("Failed to fetch bill ID:", err);
+            document.getElementById('billNumber').value = "ERROR"; 
         }
-        
-        const data = await response.json();
-        document.getElementById('billNumber').value = data.billId;
-    } catch (err) {
-        console.error("Failed to fetch bill ID:", err);
-        // Optional: show a fallback or alert
-        document.getElementById('billNumber').value = "ERROR"; 
     }
-}
+
     function getCurrentBillObj() {
         return {
             id: document.getElementById('billNumber').value,
@@ -418,44 +399,43 @@ successSound.addEventListener('error', (e) => {
             total: document.getElementById('total').textContent
         };
     }
-    // Add this to your existing script section
-document.addEventListener('keydown', function(event) {
-    // Check if the pressed key is F1
-    if (event.key === 'F1') {
-        event.preventDefault(); // Prevents the browser's default help menu from opening
-        clearBill(); // Triggers your existing clear function
-        console.log("Bill cleared via F1");
-    }
-    // F6 to Save Bill
-    if (event.key === 'F6') {
-        event.preventDefault(); // Prevents browser-specific F6 behavior (usually address bar focus)
-        saveBill();
-    }
-});
 
-
- async function saveBill() {
-    if(billItems.length === 0) return alert("Empty Bill");
-    const bill = getCurrentBillObj();
-    try {
-        const response = await fetch('/api/bills', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(bill)
-        });
-        
-        // UPDATE THIS SECTION
-        if (response.ok) {
-            // Reset sound to start and play
-            successSound.currentTime = 0; 
-            successSound.play().catch(e => console.error("Audio playback error:", e));
-            
-            alert("Bill saved successfully!");
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'F1') {
+            event.preventDefault(); 
             clearBill();
-            await loadSavedBills();
         }
-    } catch (err) { alert("Server is not running!"); }
-}
+        if (event.key === 'F6') {
+            event.preventDefault(); 
+            saveBill();
+        }
+    });
+
+    async function saveBill() {
+        if(billItems.length === 0) return alert("Empty Bill");
+        const bill = getCurrentBillObj();
+        try {
+            const response = await fetch('/api/bills', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bill)
+            });
+            
+            if (response.ok) {
+                successSound.currentTime = 0; 
+                successSound.play().catch(e => console.error("Audio playback error:", e));
+                
+                alert("Bill saved successfully!");
+                
+                // We await the clear operation completely to resolve the backend sync timing issue
+                await clearBill(); 
+                await loadSavedBills();
+            } else {
+                alert("Server rejected the bill payload. Check server logs.");
+            }
+        } catch (err) { alert("Server is not running!"); }
+    }
+
     function toggleDropdown(event, index) {
         event.stopPropagation();
         document.querySelectorAll('.dropdown-menu').forEach(menu => {
@@ -475,67 +455,62 @@ document.addEventListener('keydown', function(event) {
     }
 
     function closeAllDropdowns() {
-    document.querySelectorAll('.dropdown-menu').forEach(menu => {
-        menu.classList.remove('show');
-    });
-}
+        document.querySelectorAll('.dropdown-menu').forEach(menu => {
+            menu.classList.remove('show');
+        });
+    }
 
     async function loadSavedBills() {
-    try {
-        const response = await fetch('/api/bills');
-        currentSavedBills = await response.json();
-        const cont = document.getElementById('savedBillsList');
-        const today = new Date(); today.setHours(0, 0, 0, 0);
+        try {
+            const response = await fetch('/api/bills');
+            currentSavedBills = await response.json();
+            const cont = document.getElementById('savedBillsList');
+            const today = new Date(); today.setHours(0, 0, 0, 0);
 
-        cont.innerHTML = currentSavedBills.map((b, i) => {
-            // Check if it is an online order
-            const isOnline = b.orderSource === 'ONLINE';
-            
-            // If ONLINE, force balance to 0, otherwise calculate normally
-            const displayBalance = isOnline ? 0 : parseFloat(b.total || 0);
-            const balanceVal = parseFloat(b.total || 0);
-            
-            // Visual indicators
-            const balanceColor = displayBalance > 0 ? 'text-blue-600' : 'text-emerald-600';
-            const balanceText = displayBalance > 0 ? `₹${fmt(displayBalance)}` : "PAID";
-            
-            let dateColor = "text-slate-500";
-            let formattedDelivery = "-";
+            cont.innerHTML = currentSavedBills.map((b, i) => {
+                const isOnline = b.orderSource === 'ONLINE';
+                const displayBalance = isOnline ? 0 : parseFloat(b.total || 0);
+                
+                const balanceColor = displayBalance > 0 ? 'text-blue-600' : 'text-emerald-600';
+                const balanceText = displayBalance > 0 ? `₹${fmt(displayBalance)}` : "PAID";
+                
+                let dateColor = "text-slate-500";
+                let formattedDelivery = "-";
 
-            if (b.deliveryDate) {
-                const dDate = new Date(b.deliveryDate); dDate.setHours(0,0,0,0);
-                formattedDelivery = formatDateDDMMYYYY(b.deliveryDate);
-                if (b.deliveryTime) formattedDelivery += " (" + formatTime12H(b.deliveryTime) + ")";
-                if (dDate.getTime() === today.getTime()) dateColor = "text-blue-600";
-                else if (dDate.getTime() > today.getTime()) dateColor = "text-rose-600";
-            }
+                if (b.deliveryDate) {
+                    const dDate = new Date(b.deliveryDate); dDate.setHours(0,0,0,0);
+                    formattedDelivery = formatDateDDMMYYYY(b.deliveryDate);
+                    if (b.deliveryTime) formattedDelivery += " (" + formatTime12H(b.deliveryTime) + ")";
+                    if (dDate.getTime() === today.getTime()) dateColor = "text-blue-600";
+                    else if (dDate.getTime() > today.getTime()) dateColor = "text-rose-600";
+                }
 
-            return `<tr class="hover:bg-slate-50 border-b">
-                <td data-label="Bill ID" class="px-4 py-4 font-mono font-bold text-indigo-600">${b.id}</td>
-                <td data-label="Customer" class="px-4 py-4 font-medium uppercase truncate max-w-[100px]">${b.customer}</td>
-                <td data-label="Delivery" class="px-4 py-4 text-xs font-bold ${dateColor}">${formattedDelivery}</td>
-                <td data-label="Subtotal" class="px-4 py-4 text-right">₹${b.subtotal}</td>
-                <td data-label="Advance" class="px-4 py-4 text-right font-bold text-indigo-600">₹${b.advance || 0}</td>
-                <td data-label="Balance Due" class="px-4 py-4 text-right font-black ${balanceColor}">
-                    ${balanceText}
-                </td>
-                <td class="px-4 py-4 text-center">
-                    <div class="action-dropdown">
-                        <button onclick="toggleDropdown(event, ${i})" class="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-200">
-                            Action
-                        </button>
-                        <div id="dropdown-${i}" class="dropdown-menu">
-                            <button onclick="closeAllDropdowns();showInfo(${i})" class="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50 border-b">Details</button>
-                            <button onclick="closeAllDropdowns();openEditModal(${i})" class="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase text-indigo-600 hover:bg-indigo-50 border-b">Edit / Pay</button>
-                            <button onclick="closeAllDropdowns();printSavedBill(${i})" class="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase text-emerald-600 hover:bg-emerald-50 border-b">Print</button>
-                            <button onclick="closeAllDropdowns();deleteBill('${b.id}')" class="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase text-rose-600 hover:bg-rose-50">Delete</button>
+                return `<tr class="hover:bg-slate-50 border-b">
+                    <td data-label="Bill ID" class="px-4 py-4 font-mono font-bold text-indigo-600">${b.id}</td>
+                    <td data-label="Customer" class="px-4 py-4 font-medium uppercase truncate max-w-[100px]">${b.customer}</td>
+                    <td data-label="Delivery" class="px-4 py-4 text-xs font-bold ${dateColor}">${formattedDelivery}</td>
+                    <td data-label="Subtotal" class="px-4 py-4 text-right">₹${b.subtotal}</td>
+                    <td data-label="Advance" class="px-4 py-4 text-right font-bold text-indigo-600">₹${b.advance || 0}</td>
+                    <td data-label="Balance Due" class="px-4 py-4 text-right font-black ${balanceColor}">
+                        ${balanceText}
+                    </td>
+                    <td class="px-4 py-4 text-center">
+                        <div class="action-dropdown">
+                            <button onclick="toggleDropdown(event, ${i})" class="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-200">
+                                Action
+                            </button>
+                            <div id="dropdown-${i}" class="dropdown-menu">
+                                <button onclick="closeAllDropdowns();showInfo(${i})" class="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50 border-b">Details</button>
+                                <button onclick="closeAllDropdowns();openEditModal(${i})" class="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase text-indigo-600 hover:bg-indigo-50 border-b">Edit / Pay</button>
+                                <button onclick="closeAllDropdowns();printSavedBill(${i})" class="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase text-emerald-600 hover:bg-emerald-50 border-b">Print</button>
+                                <button onclick="closeAllDropdowns();deleteBill('${b.id}')" class="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase text-rose-600 hover:bg-rose-50">Delete</button>
+                            </div>
                         </div>
-                    </div>
-                </td>
-            </tr>`;
-        }).join('');
-    } catch (err) { console.error("Could not load bills."); }
-}
+                    </td>
+                </tr>`;
+            }).join('');
+        } catch (err) { console.error("Could not load bills."); }
+    }
 
     async function showInfo(index) {
         const b = currentSavedBills[index];
@@ -642,6 +617,7 @@ document.addEventListener('keydown', function(event) {
                 </div>
             </div>`;
 
+        // Preserved adjustment to keep from corrupting historical advance payment fields when setting fully paid
         document.getElementById('markPaidBtn').onclick = () => { 
             const totalBill = parseFloat(b.subtotal) - parseFloat(b.discount || 0); 
             document.getElementById('updAdvance').value = totalBill.toFixed(2); 
@@ -649,39 +625,37 @@ document.addEventListener('keydown', function(event) {
         document.getElementById('saveEditBtn').onclick = () => updateRecord(index);
         document.getElementById('editModal').classList.remove('hidden');
     }
-async function updateRecord(index) {
-    let b = currentSavedBills[index];
-    
-    // Ensure we are using the MongoDB _id
-    const mongoId = b._id; 
-    
-    // Gather values from inputs
-    const newDate = document.getElementById('updDate').value;
-    const newTime = document.getElementById('updTime').value;
-    const newTotalAdv = document.getElementById('updAdvance').value;
-    const newBalance = parseFloat(b.subtotal) - parseFloat(b.discount || 0) - parseFloat(newTotalAdv);
 
-    try {
-        const response = await fetch(`/api/bills/${mongoId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                deliveryDate: newDate,
-                deliveryTime: newTime,
-                advance: newTotalAdv,
-                total: fmt(newBalance)
-            })
-        });
+    async function updateRecord(index) {
+        let b = currentSavedBills[index];
+        const mongoId = b._id; 
         
-        if(response.ok) { 
-            alert("Record updated successfully!");
-            await loadSavedBills(); 
-            closeModal('editModal'); 
-        } else {
-            alert("Update failed. Check server console.");
-        }
-    } catch (err) { console.error("Update error:", err); }
-}
+        const newDate = document.getElementById('updDate').value;
+        const newTime = document.getElementById('updTime').value;
+        const newTotalAdv = document.getElementById('updAdvance').value;
+        const newBalance = parseFloat(b.subtotal) - parseFloat(b.discount || 0) - parseFloat(newTotalAdv);
+
+        try {
+            const response = await fetch(`/api/bills/${mongoId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    deliveryDate: newDate,
+                    deliveryTime: newTime,
+                    advance: newTotalAdv,
+                    total: fmt(newBalance)
+                })
+            });
+            
+            if(response.ok) { 
+                alert("Record updated successfully!");
+                await loadSavedBills(); 
+                closeModal('editModal'); 
+            } else {
+                alert("Update failed. Check server console.");
+            }
+        } catch (err) { console.error("Update error:", err); }
+    }
 
     function populatePrintArea(b) {
         document.getElementById('pBillNo').innerText = "BILL: " + b.id;
@@ -698,8 +672,16 @@ async function updateRecord(index) {
         document.getElementById('pItems').innerHTML = b.items.map(i => `<div style="display:flex;"><div style="width:50%; text-transform: uppercase;">${i.name} x${i.quantity}</div><div style="width:20%; text-align:center;">${i.quantity}</div><div style="width:30%; text-align:right;">₹${fmt(i.price * i.quantity)}</div></div>`).join('');
     }
 
-    function printThermal() { if(billItems.length === 0) return alert("Add items first"); populatePrintArea(getCurrentBillObj()); executePrint(); }
-    function printSavedBill(index) { populatePrintArea(currentSavedBills[index]); executePrint(); }
+    function printThermal() { 
+        if(billItems.length === 0) return alert("Add items first"); 
+        populatePrintArea(getCurrentBillObj()); 
+        executePrint(); 
+    }
+    
+    function printSavedBill(index) { 
+        populatePrintArea(currentSavedBills[index]); 
+        executePrint(); 
+    }
     
     function executePrint() { 
         const win = window.open('', '', 'width=58mm,height=auto'); 
@@ -708,8 +690,19 @@ async function updateRecord(index) {
         setTimeout(() => { win.print(); win.close(); }, 500); 
     }
 
-    function clearBill() {
-        billItems = []; document.getElementById('customerName').value = ""; document.getElementById('customerPhone').value = ""; document.getElementById('customerAddress').value = ""; document.getElementById('deliveryDate').value = ""; document.getElementById('deliveryTime').value = ""; document.getElementById('discount').value = 0; document.getElementById('advance').value = 0; fetchNewBillId(); document.getElementById('billNumber').value = genBillId(); renderBillItems();
+    async function clearBill() {
+        billItems = []; 
+        document.getElementById('customerName').value = ""; 
+        document.getElementById('customerPhone').value = ""; 
+        document.getElementById('customerAddress').value = ""; 
+        document.getElementById('deliveryDate').value = ""; 
+        document.getElementById('deliveryTime').value = ""; 
+        document.getElementById('discount').value = 0; 
+        document.getElementById('advance').value = 0; 
+        renderBillItems();
+        
+        // Return this fetch as a promise so the save block can wait for it properly
+        return await fetchNewBillId();
     }
 
     async function deleteBill(billId) {
@@ -722,23 +715,11 @@ async function updateRecord(index) {
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
     function logout() { localStorage.removeItem("fruitz_session"); window.location.href = "login.html"; }
 
-   // ... existing scripts ...
-
     window.onload = () => { 
-        updateTime(); 
         fetchMenuFromDB(); 
         loadSavedBills(); 
         fetchNewBillId();
     };
-
-    // New shortcut listener
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'F1') {
-            event.preventDefault();
-            clearBill();
-        }
-    });
 </script>
-  </script>
 </body>
 </html>
