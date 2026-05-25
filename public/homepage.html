@@ -1,4 +1,4 @@
-r<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <script>
@@ -70,18 +70,34 @@ r<!DOCTYPE html>
     </div>
   </div>
     
-   <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-12 animate-fade">
-    <div class="bg-white p-6 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100">
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-12 animate-fade">
+    <div class="bg-white p-6 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col justify-between min-h-[140px]">
         <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Today's Sales</p>
         <h3 id="statToday" class="text-2xl sm:text-3xl font-800 text-slate-900 truncate">₹0</h3>
     </div>
-    <div class="bg-white p-6 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100">
+
+    <div class="bg-white p-6 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col justify-between min-h-[140px]">
         <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Orders</p>
         <h3 id="statOrders" class="text-2xl sm:text-3xl font-800 text-slate-900 truncate">0</h3>
     </div>
-    <div class="bg-white p-6 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100">
-        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Month Sales</p>
-        <h3 id="statMonth" class="text-2xl sm:text-3xl font-800 text-slate-900 truncate">₹0</h3>
+
+    <div class="bg-white p-6 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col justify-between min-h-[140px] relative">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Period Sales</p>
+            
+            <div id="periodTabs" class="flex bg-slate-100 p-0.5 rounded-xl self-start sm:self-auto">
+                <button onclick="changePeriodTab('thisMonth')" id="tab-thisMonth" class="text-[9px] font-black tracking-wider uppercase px-2.5 py-1 rounded-lg transition-all bg-slate-900 text-white shadow-sm">
+                    This Month
+                </button>
+                <button onclick="changePeriodTab('lastMonth')" id="tab-lastMonth" class="text-[9px] font-black tracking-wider uppercase px-2.5 py-1 rounded-lg transition-all text-slate-500 hover:text-slate-800">
+                    Last
+                </button>
+                <button onclick="changePeriodTab('overall')" id="tab-overall" class="text-[9px] font-black tracking-wider uppercase px-2.5 py-1 rounded-lg transition-all text-slate-500 hover:text-slate-800">
+                    Overall
+                </button>
+            </div>
+        </div>
+        <h3 id="statPeriod" class="text-2xl sm:text-3xl font-800 text-slate-900 truncate">₹0</h3>
     </div>
 </div>
 
@@ -138,10 +154,18 @@ r<!DOCTYPE html>
         <span class="text-[10px] font-black crimson-text uppercase tracking-[0.2em]">Edit →</span>
     </a>
 </div>
+<script>
 
- <script>
-    let currentMainFilter = 'ALL';
+ let currentMainFilter = 'ALL';
     let currentSubFilter = null;
+    let currentPeriodTab = 'thisMonth'; // Track active sales period tab
+    
+    // Global store to retain calculated numbers for swift toggles
+    let calculatedSales = {
+        thisMonth: 0,
+        lastMonth: 0,
+        overall: 0
+    };
 
     function setFilter(filter) {
         currentMainFilter = filter;
@@ -169,35 +193,63 @@ r<!DOCTYPE html>
         
         updateStats();
     }
-    async function openAddStaff(e) {
-    e.preventDefault();
 
-    try {
-        const res = await fetch('/api/current-user');
+    // Handles changing classes and values when switching period tabs
+    function changePeriodTab(targetPeriod) {
+        currentPeriodTab = targetPeriod;
+        
+        // Reset all buttons to unselected state
+        document.querySelectorAll('#periodTabs button').forEach(btn => {
+            btn.className = "text-[9px] font-black tracking-wider uppercase px-2.5 py-1 rounded-lg transition-all text-slate-500 hover:text-slate-800";
+        });
 
-        if (!res.ok) {
-            window.location.href = "login.html";
-            return;
-        }
+        // Highlight selected active button pill
+        const activeBtn = document.getElementById('tab-' + targetPeriod);
+        activeBtn.className = "text-[9px] font-black tracking-wider uppercase px-2.5 py-1 rounded-lg transition-all bg-slate-900 text-white shadow-sm";
 
-        const data = await res.json();
-
-        if (data.role === 'admin') {
-            window.location.href = "adduser.html";
-        } else {
-            alert("Access Denied: Admins only");
-        }
-
-    } catch (err) {
-        window.location.href = "login.html";
+        // Render target values instantly
+        renderPeriodDisplay();
     }
-}
+
+    function renderPeriodDisplay() {
+        const targetValue = calculatedSales[currentPeriodTab] || 0;
+        document.getElementById('statPeriod').textContent = `₹${targetValue.toLocaleString()}`;
+    }
+
+    async function openAddStaff(e) {
+        e.preventDefault();
+        try {
+            const res = await fetch('/api/current-user');
+            if (!res.ok) {
+                window.location.href = "login.html";
+                return;
+            }
+            const data = await res.json();
+            if (data.role === 'admin') {
+                window.location.href = "adduser.html";
+            } else {
+                alert("Access Denied: Admins only");
+            }
+        } catch (err) {
+            window.location.href = "login.html";
+        }
+    }
+
     async function updateStats() {
         try {
             const response = await fetch('/api/bills');
             const bills = await response.json();
             const now = new Date();
             
+            // Build calendar boundaries for Last Month tracking
+            let lastMonthYear = now.getFullYear();
+            let lastMonthValue = now.getMonth() - 1;
+            if (lastMonthValue < 0) {
+                lastMonthValue = 11;
+                lastMonthYear -= 1;
+            }
+
+            // Stream context filters for active order counts (All, Online, Offline)
             const filteredBills = bills.filter(bill => {
                 if (currentMainFilter === 'ALL') return true;
                 if (currentMainFilter === 'OFFLINE') return bill.orderSource !== 'ONLINE';
@@ -209,62 +261,83 @@ r<!DOCTYPE html>
             });
 
             let todaySales = 0;
-            let monthSales = 0;
             let totalOrders = filteredBills.length;
+            
+            // Clear storage counters before accumulator runs
+            calculatedSales.thisMonth = 0;
+            calculatedSales.lastMonth = 0;
+            calculatedSales.overall = 0;
 
-            filteredBills.forEach(bill => {
+            // Loop through all database elements for precise global tracking
+            bills.forEach(bill => {
                 const billDate = new Date(bill.deliveryDate || bill.date);
-                const amount = parseFloat(bill.total || 0);
+                
+                // Advanced-payment safety balance check logic
+                const advancePaid = parseFloat(bill.advance || 0);
+                const balanceDue = parseFloat(bill.total || 0); 
+                const trueSaleAmount = advancePaid + balanceDue;
 
-                if (billDate.toDateString() === now.toDateString()) todaySales += amount;
-                if (billDate.getMonth() === now.getMonth() && billDate.getFullYear() === now.getFullYear()) monthSales += amount;
+                // 1. All-time Grand Totals
+                calculatedSales.overall += trueSaleAmount;
+
+                // 2. Today's metrics tracking
+                if (billDate.toDateString() === now.toDateString()) {
+                    todaySales += trueSaleAmount;
+                }
+
+                // 3. Current Active Month tracking
+                if (billDate.getMonth() === now.getMonth() && billDate.getFullYear() === now.getFullYear()) {
+                    calculatedSales.thisMonth += trueSaleAmount;
+                }
+
+                // 4. Past Month historical data tracking
+                if (billDate.getMonth() === lastMonthValue && billDate.getFullYear() === lastMonthYear) {
+                    calculatedSales.lastMonth += trueSaleAmount;
+                }
             });
 
+            // Set content values inside DOM container fields
             document.getElementById('statToday').textContent = `₹${todaySales.toLocaleString()}`;
             document.getElementById('statOrders').textContent = totalOrders;
-            document.getElementById('statMonth').textContent = `₹${monthSales.toLocaleString()}`;
+            
+            // Render active tracking layout values
+            renderPeriodDisplay();
             
         } catch (err) { 
             console.error("Error fetching stats:", err); 
         }
     }
-     async function displayLoggedInUser() {
-    try {
-        const response = await fetch('/api/current-user', { credentials: 'include' });
-        if (response.ok) {
-            const data = await response.json();
-            
-            // 1. Update the UI Text
-            document.getElementById('displayUsername').textContent = data.username;
-            document.getElementById('displayRole').textContent = data.role ? data.role.toUpperCase() : 'USER';
 
-            // 2. Identify the "Add User" Tile
-            const addUserTile = document.querySelector('a[href="adduser.html"]');
-            
-            // 3. SECURE CHECK: Only "admin" (case insensitive) is allowed
-            const userRole = (data.role || '').toLowerCase();
+    async function displayLoggedInUser() {
+        try {
+            const response = await fetch('/api/current-user', { credentials: 'include' });
+            if (response.ok) {
+                const data = await response.json();
+                
+                document.getElementById('displayUsername').textContent = data.username;
+                document.getElementById('displayRole').textContent = data.role ? data.role.toUpperCase() : 'USER';
 
-            if (userRole !== 'admin') {
-                // Change the link to do nothing
-                addUserTile.href = "javascript:void(0)"; 
-                
-                // Show the "No Access" message on click
-                addUserTile.onclick = function(e) {
-                    e.preventDefault();
-                    alert("Access Denied: You have no access to staff management.");
-                };
-                
-                // Visually indicate it is locked
-                addUserTile.style.opacity = "0.4";
-                addUserTile.style.filter = "grayscale(100%)";
-                addUserTile.querySelector('span').textContent = "LOCKED";
-                addUserTile.querySelector('h3').classList.add('text-slate-400');
+                const addUserTile = document.querySelector('a[href="adduser.html"]');
+                const userRole = (data.role || '').toLowerCase();
+
+                if (userRole !== 'admin') {
+                    addUserTile.href = "javascript:void(0)"; 
+                    addUserTile.onclick = function(e) {
+                        e.preventDefault();
+                        alert("Access Denied: You have no access to staff management.");
+                    };
+                    
+                    addUserTile.style.opacity = "0.4";
+                    addUserTile.style.filter = "grayscale(100%)";
+                    addUserTile.querySelector('span').textContent = "LOCKED";
+                    addUserTile.querySelector('h3').classList.add('text-slate-400');
+                }
             }
+        } catch (error) {
+            console.error("Could not fetch user:", error);
         }
-    } catch (error) {
-        console.error("Could not fetch user:", error);
     }
-}
+
     async function logout() {
         try {
             const response = await fetch('/api/logout', { method: 'POST' });
@@ -277,21 +350,6 @@ r<!DOCTYPE html>
         }
     }
 
-    async function displayLoggedInUser() {
-    try {
-        const response = await fetch('/api/current-user', { credentials: 'include' });
-        if (response.ok) {
-            const data = await response.json();
-            document.getElementById('displayUsername').textContent = data.username;
-            
-            // Logic to display 'Admin' if the property is true
-          document.getElementById('displayRole').textContent = 
-    data.role ? data.role.toUpperCase() : 'USER';
-        }
-    } catch (error) {
-        console.error("Could not fetch user:", error);
-    }
-}
     window.onload = () => { 
         displayLoggedInUser();
         updateStats();
