@@ -60,8 +60,7 @@
       </h1>
     </div>
 
-    <!-- CUSTOM DATE -->
-   <div class="flex items-center bg-white px-4 py-2 rounded-2xl border border-slate-200 shadow-sm gap-3">
+    <div class="flex items-center bg-white px-4 py-2 rounded-2xl border border-slate-200 shadow-sm gap-3">
 
     <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -130,10 +129,8 @@
     </div>
   </div>
 
-  <!-- MOBILE -->
   <div id="mobileListView" class="md:hidden space-y-1"></div>
 
-  <!-- DESKTOP -->
   <div class="hidden md:block overflow-hidden bg-white rounded-2xl border border-slate-100 shadow-sm">
 
     <table class="w-full text-left">
@@ -152,6 +149,41 @@
         class="divide-y divide-slate-50 text-sm"></tbody>
 
     </table>
+  </div>
+</div>
+
+<div id="breakdownModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+  <div class="bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+    <div class="bg-white px-5 py-4 flex justify-between items-center border-b border-slate-100">
+      <div>
+        <h3 id="modalBillId" class="font-bold font-mono tracking-wide text-xs text-red-500">#BILLID</h3>
+        <p id="modalCustomerName" class="text-xs font-extrabold text-slate-800 uppercase tracking-tight truncate max-w-[200px] mt-0.5">Walk-in</p>
+      </div>
+      <button onclick="closeBreakdownModal()" class="text-slate-400 hover:text-slate-600 text-xl font-medium cursor-pointer">&times;</button>
+    </div>
+    
+    <div class="bg-white p-5 space-y-4 text-xs font-medium uppercase tracking-tight">
+      <div class="flex justify-between items-center text-slate-500 pb-2 border-b border-slate-100">
+        <span>Gross Subtotal</span>
+        <span id="modalSubtotal" class="font-bold text-slate-800">₹0.00</span>
+      </div>
+      <div class="flex justify-between items-center text-slate-500 pb-2 border-b border-slate-100">
+        <span>Discount Allowed (-)</span>
+        <span id="modalDiscount" class="font-bold text-slate-800">₹0.00</span>
+      </div>
+      <div class="flex justify-between items-center text-slate-500 pb-2 border-b border-slate-100">
+        <span>Advance Collected (-)</span>
+        <span id="modalAdvance" class="font-bold text-slate-800">₹0.00</span>
+      </div>
+      <div class="flex justify-between items-center pt-2 text-sm font-black">
+        <span class="text-slate-500">Remaining Balance</span>
+        <span id="modalBalance" class="text-slate-900">₹0.00</span>
+      </div>
+    </div>
+    
+    <div class="px-5 py-3.5 bg-white border-t border-slate-100 flex justify-end">
+      <button onclick="closeBreakdownModal()" class="px-4 py-1.5 border border-slate-200 text-slate-700 rounded-lg font-bold text-[10px] tracking-wider uppercase hover:bg-slate-50 transition-colors cursor-pointer">Dismiss</button>
+    </div>
   </div>
 </div>
 
@@ -233,6 +265,34 @@ function clearFilters() {
     loadSavedBills();
 }
 
+function showAmountBreakdown(index) {
+    const b = allBills[index];
+    if (!b) return;
+
+    document.getElementById('modalBillId').textContent = `BILL LOG: #${b.id}`;
+    document.getElementById('modalCustomerName').textContent = b.customer || "Walk-in";
+    
+    document.getElementById('modalSubtotal').textContent = `₹${fmt(b.subtotal)}`;
+    document.getElementById('modalDiscount').textContent = `₹${fmt(b.discount)}`;
+    document.getElementById('modalAdvance').textContent = `₹${fmt(b.advance)}`;
+    
+    const balance = parseFloat(b.total || 0);
+    const balanceEl = document.getElementById('modalBalance');
+    balanceEl.textContent = `₹${fmt(balance)}`;
+    
+    if(balance > 0) {
+        balanceEl.className = "text-red-600 text-sm font-black";
+    } else {
+        balanceEl.className = "text-green-600 text-sm font-black";
+    }
+    
+    document.getElementById('breakdownModal').classList.remove('hidden');
+}
+
+function closeBreakdownModal() {
+    document.getElementById('breakdownModal').classList.add('hidden');
+}
+
 async function loadSavedBills() {
 
   const mobileCont =
@@ -252,14 +312,14 @@ async function loadSavedBills() {
 
     const res = await fetch('/api/bills');
 
-    allBills = await res.json();
+    const rawBills = await res.json();
 
-    const sorted = allBills.sort(
+    allBills = rawBills.sort(
       (a, b) => new Date(b.date) - new Date(a.date)
     );
 
-    const filtered = sorted.filter(b => {
-
+    const filtered = allBills.map((b, originalIndex) => ({ bill: b, idx: originalIndex })).filter(item => {
+      const b = item.bill;
       const matchesSearch =
         String(b.id).toLowerCase().includes(search) ||
         (b.customer || "")
@@ -301,7 +361,9 @@ async function loadSavedBills() {
 
     let lastLabel = "";
 
-    filtered.forEach(b => {
+    filtered.forEach(item => {
+      const b = item.bill;
+      const globalIndex = item.idx;
 
       const customerName =
         (b.customer || "Walk-in");
@@ -352,10 +414,9 @@ async function loadSavedBills() {
       }
 
       mobileCont.innerHTML += `
-        <div onclick="window.location.href='viewdetailedbill.html?id=${b.id}'"
-          class="flex items-center justify-between p-4 bg-white border-b border-slate-50 active:bg-slate-50 transition cursor-pointer">
+        <div class="flex items-center justify-between p-4 bg-white border-b border-slate-50 active:bg-slate-50 transition cursor-pointer">
 
-          <div class="flex items-center gap-4">
+          <div onclick="window.location.href='viewdetailedbill.html?id=${b.id}'" class="flex items-center gap-4 flex-1">
 
             ${icon}
 
@@ -373,17 +434,17 @@ async function loadSavedBills() {
 
           <div class="text-right flex items-center gap-2">
 
-            <div>
+            <div onclick="showAmountBreakdown(${globalIndex})" class="p-1.5 rounded-xl transition">
               <div class="font-bold text-green-600">
                 ₹${amount}
               </div>
 
-              <div class="text-[10px] text-slate-400">
-                ${displayDate}
+              <div class="text-[10px] text-slate-400 underline decoration-dotted">
+                Breakdown
               </div>
             </div>
 
-            <svg class="w-4 h-4 text-slate-300"
+            <svg onclick="window.location.href='viewdetailedbill.html?id=${b.id}'" class="w-4 h-4 text-slate-300"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24">
@@ -413,8 +474,10 @@ async function loadSavedBills() {
             ${displayDate}
           </td>
 
-          <td class="px-6 py-4 text-right font-black text-slate-900">
-            ₹${amount}
+          <td class="px-6 py-4 text-right">
+            <button onclick="showAmountBreakdown(${globalIndex})" class="bg-transparent border-none p-0 outline-none font-black text-slate-900 text-right font-mono cursor-pointer hover:text-red-500 transition-colors">
+              ₹${amount}
+            </button>
           </td>
 
           <td class="px-6 py-4 text-center">
@@ -452,6 +515,13 @@ async function loadSavedBills() {
     console.error(e);
   }
 }
+
+window.addEventListener('click', function(event) {
+    const modal = document.getElementById('breakdownModal');
+    if (event.target === modal) {
+        closeBreakdownModal();
+    }
+});
 
 loadSavedBills();
 
