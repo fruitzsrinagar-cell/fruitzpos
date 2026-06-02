@@ -108,8 +108,19 @@ const BillSchema = new mongoose.Schema({
     items: Array,
     total: Number,
     balance: Number,
-    orderSource: { type: String, default: 'offline' }
-}); 
+    packagedOn: {
+        type: String, // Stores format like "2026-06-02"
+        default: ""
+    },
+    packagedTime: {
+        type: String, // Stores format like "22:00"
+        default: ""
+    }, 
+    orderSource: { 
+        type: String, 
+        default: 'offline' 
+    }
+}, { timestamps: true }); // Moved schema options here cleanly
 
 const Bill = mongoose.model('Bill', BillSchema);
 
@@ -294,7 +305,43 @@ app.post('/api/bills', async (req, res) => {
         res.status(500).send(err); 
     }
 });
+// --- NEW PACKAGING UPDATE ROUTE ---
+app.patch('/api/bills/:id/packaging', async (req, res) => {
+    try {
+        const billId = req.params.id; // Extracts the custom Bill ID (e.g., FR-xxxxxx-xxx)
+        const { packagedOn, packagedTime } = req.body;
 
+        // Find the bill by your custom id field and update its details
+        const updatedBill = await Bill.findOneAndUpdate(
+            { id: billId },
+            { 
+                $set: { 
+                    packagedOn: packagedOn, 
+                    packagedTime: packagedTime 
+                } 
+            },
+            { new: true } // Returns the newly modified document payload
+        );
+
+        if (!updatedBill) {
+            return res.status(404).json({ error: "Bill transactional profile not found" });
+        }
+
+        // Add an audit trail entry for the package tracking change log
+        const logEntry = `Sticky Tag printed: Package compiled on ${packagedOn} at ${packagedTime}`;
+        const newHistory = new History({
+            bill_id: billId,
+            edit_date: new Date().toLocaleString(),
+            change_log: logEntry
+        });
+        await newHistory.save();
+
+        res.status(200).json({ success: true, message: "Packaging sync coordinates saved onto Cloud DB Cluster." });
+    } catch (err) {
+        console.error("Failed to commit packaging timestamp updates:", err);
+        res.status(500).json({ error: "Cloud database updates rejected." });
+    }
+});
 // --- UPDATED ROUTE IN server.js ---
 app.put('/api/bills/:id', async (req, res) => {
     try {

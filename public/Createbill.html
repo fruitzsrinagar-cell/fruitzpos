@@ -198,6 +198,32 @@
     </section>
   </main>
 
+  <div id="tagCustomModal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+      <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+          <div class="bg-amber-600 px-6 py-4 flex justify-between items-center text-white">
+              <h3 class="font-bold uppercase tracking-widest text-sm">Tag Options: <span id="modal-tag-bill-id-title"></span></h3>
+              <button onclick="closeModal('tagCustomModal')" class="hover:text-white/70 text-2xl">&times;</button>
+          </div>
+          <div class="p-6 space-y-4">
+              <input type="hidden" id="modal-tag-bill-id">
+              <input type="hidden" id="modal-tag-bill-date">
+
+              <div>
+                  <label class="block text-[10px] font-black text-slate-400 mb-1 uppercase tracking-wider">Packaging / Ready Date</label>
+                  <input id="modal-tag-pack-date" type="date" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 font-bold">
+              </div>
+              <div>
+                  <label class="block text-[10px] font-black text-slate-400 mb-1 uppercase tracking-wider">Packaging / Ready Time</label>
+                  <input id="modal-tag-time" type="time" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 font-bold">
+              </div>
+          </div>
+          <div class="p-4 bg-slate-50 border-t flex justify-end gap-2">
+              <button onclick="closeModal('tagCustomModal')" class="px-4 py-2 text-slate-500 font-bold text-xs uppercase">Cancel</button>
+              <button onclick="executeKnotTagPrint()" class="px-6 py-2 bg-amber-600 text-white rounded-lg font-bold shadow-md text-xs uppercase hover:bg-amber-700">Print Tag Now</button>
+          </div>
+      </div>
+  </div>
+
   <div id="infoModal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
       <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
           <div class="bg-slate-800 px-6 py-4 flex justify-between items-center text-white">
@@ -260,7 +286,66 @@
       <div style="text-align:center; font-size:10px; font-style: italic; border-top: 1px dotted #000; padding-top: 4px;">powdered by Fruit'z billing software</div>
     </div>
   </div>
+  <div id="knot-tag-section" style="display: none;font-family:monospace; font-size:12px;">
+    <div class="knot-tag-print" style="font-family:monospace;">
+      <div style="text-align:center; font-weight:900; font-size:24px;">FRUIT’Z</div>
+      <div style="text-align:center; font-size:11px; font-style: italic;">For Your Wellbeing</div>
+      <div style="text-align:center; font-size:11px;">FSSIC NO : 24552365210253</div>
+      <div style="text-align:center; font-size:11px;">Batamaloo, Srinagar</div>
+      <div style="text-align:center; font-size:11px; font-weight: bold;">7006149827, 7889762496</div>
+      <hr style="border:1px solid #000; margin:6px 0;">
+        <div class="text-center bold" style="font-size:18px">PACKAGING SLIP</div>
+        
+        <div class="divider"></div>
+        <div><span class="bold">BILL ID:</span> <span id="tag-bill-id"></span></div>
+        <div><span class="bold">BILL DATE:</span> <span id="tag-bill-date"></span></div>
+        <div><span class="bold">PACKED ON:</span> <span id="tag-pack-date"></span></div>
+        <div><span class="bold">TIME:</span> <span id="tag-time"></span></div>
+        
+        <div class="divider"></div>
+        
+        <div class="alert-box">
+            <div style="text-align:center; font-weight:900; font-size:24px;"> FRESHNESS NOTICE </div>
+            <div style=" font-weight:600; font-size:13px;">REFRIGERATE THE FRUITS AS SOON AS POSSIBLE AND REMOVE FROM THE BASKET.</div>
+        </div>
+        
+        <div class="alert-box text-center bold">
+            BEST BEFORE 24 HRS FROM PACKAGING DATE
+        </div>
+        
+        <div class="divider"></div>
+        <div class="text-center bold" style="font-size: 10px; margin-top: 8px;">*** THANK YOU ***</div>
+    </div>
+</div>
+<style>
+@media print {
+    /* Hide everything else on the screen when printing the knot tag */
+    body.printing-knot-tag > :not(#knot-tag-section) {
+        display: none !important;
+    }
+    
+    body.printing-knot-tag #knot-tag-section {
+        display: block !important;
+    }
 
+    /* 58mm Thermal Printer Specific Styles */
+    .knot-tag-print {
+        width: 58mm;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 12px;
+        line-height: 1.4;
+        color: #000;
+        background: #fff;
+        padding: 5px;
+        margin: 0;
+        height: auto; /* Dynamic height so text never cuts off */
+    }
+    .knot-tag-print .text-center { text-align: center; }
+    .knot-tag-print .bold { font-weight: bold; }
+    .knot-tag-print .divider { border-top: 1px dashed #000; margin: 5px 0; }
+    .knot-tag-print .alert-box { border: 1px solid #000; padding: 6px; margin-top: 5px; font-size: 11px; }
+}
+</style>
   <script>
     const successSound = new Audio('success.mp3'); 
 
@@ -292,15 +377,93 @@
         return `${h12}:${minutes} ${ampm}`;
     }
 
-    async function fetchMenuFromDB() {
-        try {
-            const response = await fetch('/api/menu');
-            menu = await response.json();
-            renderMenu();
-        } catch (err) {
-            console.error("Database connection failed.");
-        }
+// Opens the modal view and fills inputs with the row's defaults
+function printKnotTag(billId, billDate, defaultPackDate, defaultTime) {
+    document.getElementById('modal-tag-bill-id-title').innerText = billId;
+    document.getElementById('modal-tag-bill-id').value = billId;
+    document.getElementById('modal-tag-bill-date').value = billDate;
+
+    // Convert default date string if it's in DD-MM-YYYY back to input-friendly format YYYY-MM-DD
+    let inputDate = new Date().toISOString().split('T')[0]; 
+    if (defaultPackDate && defaultPackDate.includes('-')) {
+        const parts = defaultPackDate.split('-');
+        if(parts[2] && parts[2].length === 4) inputDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
     }
+    document.getElementById('modal-tag-pack-date').value = inputDate;
+
+    // Convert standard 12H display time back to clean 24H element time value (e.g. "10:00 PM" -> "22:00")
+    let inputTime = "22:00"; 
+    if (defaultTime && defaultTime.includes(' ')) {
+        const [timePart, ampm] = defaultTime.split(' ');
+        let [hrs, mins] = timePart.split(':');
+        let hours = parseInt(hrs);
+        if (ampm.toUpperCase() === 'PM' && hours < 12) hours += 12;
+        if (ampm.toUpperCase() === 'AM' && hours === 12) hours = 0;
+        inputTime = `${String(hours).padStart(2, '0')}:${mins}`;
+    } else if (defaultTime && defaultTime.includes(':')) {
+        inputTime = defaultTime;
+    }
+    document.getElementById('modal-tag-time').value = inputTime;
+
+    document.getElementById('tagCustomModal').classList.remove('hidden');
+}
+
+// Submits the new values permanently to MongoDB via PATCH and prints the label tag
+async function executeKnotTagPrint() {
+    const billId = document.getElementById('modal-tag-bill-id').value;
+    const billDate = document.getElementById('modal-tag-bill-date').value;
+    const rawDate = document.getElementById('modal-tag-pack-date').value; 
+    const rawTime = document.getElementById('modal-tag-time').value;      
+
+    // 1. Submit parameters permanently to your MongoDB cluster
+    try {
+        const response = await fetch(`/api/bills/${billId}/packaging`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                packagedOn: rawDate,
+                packagedTime: rawTime
+            })
+        });
+
+        if (response.ok) {
+            if (typeof loadSavedBills === 'function') loadSavedBills();
+        } else {
+            console.error("Failed to save packaging options to backend route configuration.");
+        }
+    } catch (err) {
+        console.error("Database connection error:", err);
+    }
+
+    // 2. Format packaging dates cleanly into standard DD-MM-YYYY format
+    let formattedPackDate = "-";
+    if (rawDate) {
+        const [y, m, d] = rawDate.split('-');
+        formattedPackDate = `${d}-${m}-${y}`;
+    }
+
+    // 3. Format input values safely into 12H AM/PM format for printing
+    let formattedTime = "N/A";
+    if (rawTime) {
+        let [hours, minutes] = rawTime.split(':');
+        let h = parseInt(hours);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+        formattedTime = `${h}:${minutes} ${ampm}`;
+    }
+
+    // 4. Update printer node values
+    document.getElementById('tag-bill-id').innerText = billId.toUpperCase();
+    document.getElementById('tag-bill-date').innerText = billDate;
+    document.getElementById('tag-pack-date').innerText = formattedPackDate;
+    document.getElementById('tag-time').innerText = formattedTime.toUpperCase();
+
+    // 5. Fire thermal print pipeline stream
+    closeModal('tagCustomModal');
+    document.body.classList.add('printing-knot-tag');
+    window.print();
+    document.body.classList.remove('printing-knot-tag');
+}
 
     function renderMenu() {
         const box = document.getElementById('menuItems');
@@ -503,7 +666,10 @@
                                 <button onclick="closeAllDropdowns();showInfo(${i})" class="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50 border-b">Details</button>
                                 <button onclick="closeAllDropdowns();openEditModal(${i})" class="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase text-indigo-600 hover:bg-indigo-50 border-b">Edit / Pay</button>
                                 <button onclick="closeAllDropdowns();printSavedBill(${i})" class="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase text-emerald-600 hover:bg-emerald-50 border-b">Print</button>
-                                <button onclick="closeAllDropdowns();deleteBill('${b.id}')" class="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase text-rose-600 hover:bg-rose-50">Delete</button>
+                                <button onclick="closeAllDropdowns();deleteBill('${b.id}')" class="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase text-rose-600 hover:bg-rose-50 border-b">Delete</button>
+                                <button onclick="closeAllDropdowns(); printKnotTag('${b.id}', '${formatDateDDMMYYYY(b.date)}', '${b.packagedOn ? b.packagedOn : (b.deliveryDate ? formatDateDDMMYYYY(b.deliveryDate) : formatDateDDMMYYYY(b.date))}', '${b.packagedTime ? b.packagedTime : (b.deliveryTime ? b.deliveryTime : '22:00')}')" class="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase text-amber-600 hover:bg-amber-50">
+                                    Sticky Tag
+                                </button>
                             </div>
                         </div>
                     </td>
@@ -552,14 +718,27 @@
         body.innerHTML = `
             <div class="space-y-6">
                 <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">Customer</p>
-                        <p class="text-sm font-bold uppercase text-slate-900">${b.customer}</p>
-                    </div>
-                    <div>
-                        <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">Phone</p>
-                        <p class="text-sm font-semibold text-slate-700">${b.phone || 'N/A'}</p>
-                    </div>
+    <div>
+        <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">Customer</p>
+        <p class="text-sm font-bold uppercase text-slate-900">${b.customer}</p>
+    </div>
+    <div>
+        <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">Phone</p>
+        <p class="text-sm font-semibold text-slate-700">${b.phone || 'N/A'}</p>
+    </div>
+    <div class="col-span-2">
+        <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">Address</p>
+        <p class="text-sm font-semibold text-slate-700">${b.address || 'N/A'}</p>
+    </div>
+    <div>
+        <p class="text-[10px] text-indigo-400 font-bold uppercase mb-1">Packaged Date</p>
+        <p class="text-sm font-black text-indigo-600">${b.packagedOn ? formatDateDDMMYYYY(b.packagedOn) : 'NOT PACKAGED'}</p>
+    </div>
+    <div>
+        <p class="text-[10px] text-indigo-400 font-bold uppercase mb-1">Packaged Time</p>
+        <p class="text-sm font-black text-indigo-600">${b.packagedTime ? formatTime12H(b.packagedTime) : 'NOT PACKAGED'}</p>
+    </div>
+</div>
                 </div>
                 <div class="bg-indigo-50/50 p-4 rounded-xl space-y-2 border border-indigo-100">
                     <p class="text-[10px] text-indigo-400 font-black uppercase mb-2">Itemized List</p>
@@ -701,7 +880,6 @@
         document.getElementById('advance').value = 0; 
         renderBillItems();
         
-        // Return this fetch as a promise so the save block can wait for it properly
         return await fetchNewBillId();
     }
 
@@ -714,6 +892,16 @@
 
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
     function logout() { localStorage.removeItem("fruitz_session"); window.location.href = "login.html"; }
+
+    async function fetchMenuFromDB() {
+        try {
+            const response = await fetch('/api/menu');
+            if (response.ok) {
+                menu = await response.json();
+                renderMenu();
+            }
+        } catch (err) { console.error("Could not load menu items."); }
+    }
 
     window.onload = () => { 
         fetchMenuFromDB(); 
