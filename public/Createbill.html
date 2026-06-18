@@ -121,6 +121,28 @@
                 </div>
             </div>
 
+            <div id="pastOrdersContainer" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 lg:p-6 hidden">
+                <h3 class="text-sm font-bold text-amber-600 uppercase mb-3 flex items-center gap-2">
+                    <span class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
+                    Customer Purchase History
+                </h3>
+                <div class="overflow-x-auto custom-scrollbar max-h-[220px]">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="text-slate-400 font-bold uppercase border-b bg-slate-50">
+                                <th class="p-3">Bill ID</th>
+                                <th class="p-3">Date</th>
+                                <th class="p-3">Items Order Summary</th>
+                                <th class="p-3 text-right">Paid Amount</th>
+                                <th class="p-3 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pastOrdersRows" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+            
+
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 lg:p-6">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                     <h2 class="text-lg font-bold">Quick Menu</h2>
@@ -290,30 +312,23 @@
     <div class="knot-tag-print" style="font-family:monospace;">
       <div style="text-align:center; font-weight:900; font-size:24px;">FRUIT’Z</div>
       <div style="text-align:center; font-size:11px; font-style: italic;">For Your Wellbeing</div>
-
-      <hr style="border:1px solid #000; margin:6px 0;">
-        <div class="text-center bold" style="font-size:18px">PACKAGING SLIP</div>
-        <div class="text-center bold" style="font-size:14px">DO NOT REMOVE THIS SLIP</div>
-
-        
-        <div class="divider"></div>
+<div class="divider"></div>
         <div><span class="bold">BILL ID:</span> <span id="tag-bill-id"></span></div>
         <div><span class="bold">BILL DATE:</span> <span id="tag-bill-date"></span></div>
         <div><span class="bold">PACKED ON:</span> <span id="tag-pack-date"></span></div>
         <div><span class="bold">TIME:</span> <span id="tag-time"></span></div>
         
-        <div class="divider"></div>
-        
-        <!-- Freshness Notice with Bullet Points Block -->
+      <hr style="border:1px solid #000; margin:6px 0;">
+        <div class="text-center bold" style="font-size:22px">INSTRUCTION SLIP</div>
+        <div class="text-center bold" style="font-size:11px">DO NOT REMOVE THIS SLIP</div>
+
         <div class="alert-box" style="padding: 6px 4px 6px 12px;">
-            <div style="text-align:center; font-weight:900; font-size:16px; margin-bottom: 6px; border-bottom: 1px dotted #000; padding-bottom: 2px;">FRESHNESS NOTICE</div>
             <ul style="list-style-type: dashed; margin: 0; padding-left: 10px; font-weight:600; font-size:11px; line-height: 1.4;">
                 <li style="margin-bottom: 3px;">IMMEDIATELY REMOVE ALL THE FRUITS FROM THE BASKET.</li>
                 <li style="margin-bottom: 3px;">REFRIGERATE THE FRUITS AS SOON AS POSSIBLE.</li>
             </ul>
         </div>
         
-        <!-- Expiry & Queries Notice Box -->
         <div class="alert-box" style="font-weight: 700; font-size: 11px; text-align: center; line-height: 1.4;">
             <div style="text-transform: uppercase;">Best to use within 24hrs of packaging time.</div>
             <div style="margin-top: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; border-top: 1px dashed #000; padding-top: 4px;">
@@ -327,7 +342,6 @@
 </div>
 <style>
 @media print {
-    /* Hide everything else on the screen when printing the knot tag */
     body.printing-knot-tag > :not(#knot-tag-section) {
         display: none !important;
     }
@@ -336,7 +350,6 @@
         display: block !important;
     }
 
-    /* 58mm Thermal Printer Specific Styles */
     .knot-tag-print {
         width: 58mm;
         font-family: 'Courier New', Courier, monospace;
@@ -346,7 +359,7 @@
         background: #fff;
         padding: 5px;
         margin: 0;
-        height: auto; /* Dynamic height so text never cuts off */
+        height: auto;
     }
     .knot-tag-print .text-center { text-align: center; }
     .knot-tag-print .bold { font-weight: bold; }
@@ -385,13 +398,11 @@
         return `${h12}:${minutes} ${ampm}`;
     }
 
-// Opens the modal view and fills inputs with the row's defaults
 function printKnotTag(billId, billDate, defaultPackDate, defaultTime) {
     document.getElementById('modal-tag-bill-id-title').innerText = billId;
     document.getElementById('modal-tag-bill-id').value = billId;
     document.getElementById('modal-tag-bill-date').value = billDate;
 
-    // Convert default date string if it's in DD-MM-YYYY back to input-friendly format YYYY-MM-DD
     let inputDate = new Date().toISOString().split('T')[0]; 
     if (defaultPackDate && defaultPackDate.includes('-')) {
         const parts = defaultPackDate.split('-');
@@ -399,7 +410,6 @@ function printKnotTag(billId, billDate, defaultPackDate, defaultTime) {
     }
     document.getElementById('modal-tag-pack-date').value = inputDate;
 
-    // Convert standard 12H display time back to clean 24H element time value (e.g. "10:00 PM" -> "22:00")
     let inputTime = "22:00"; 
     if (defaultTime && defaultTime.includes(' ')) {
         const [timePart, ampm] = defaultTime.split(' ');
@@ -416,14 +426,12 @@ function printKnotTag(billId, billDate, defaultPackDate, defaultTime) {
     document.getElementById('tagCustomModal').classList.remove('hidden');
 }
 
-// Submits the new values permanently to MongoDB via PATCH and prints the label tag
 async function executeKnotTagPrint() {
     const billId = document.getElementById('modal-tag-bill-id').value;
     const billDate = document.getElementById('modal-tag-bill-date').value;
     const rawDate = document.getElementById('modal-tag-pack-date').value; 
     const rawTime = document.getElementById('modal-tag-time').value;      
 
-    // 1. Submit parameters permanently to your MongoDB cluster
     try {
         const response = await fetch(`/api/bills/${billId}/packaging`, {
             method: 'PATCH',
@@ -443,14 +451,12 @@ async function executeKnotTagPrint() {
         console.error("Database connection error:", err);
     }
 
-    // 2. Format packaging dates cleanly into standard DD-MM-YYYY format
     let formattedPackDate = "-";
     if (rawDate) {
         const [y, m, d] = rawDate.split('-');
         formattedPackDate = `${d}-${m}-${y}`;
     }
 
-    // 3. Format input values safely into 12H AM/PM format for printing
     let formattedTime = "N/A";
     if (rawTime) {
         let [hours, minutes] = rawTime.split(':');
@@ -460,13 +466,11 @@ async function executeKnotTagPrint() {
         formattedTime = `${h}:${minutes} ${ampm}`;
     }
 
-    // 4. Update printer node values
     document.getElementById('tag-bill-id').innerText = billId.toUpperCase();
     document.getElementById('tag-bill-date').innerText = billDate;
     document.getElementById('tag-pack-date').innerText = formattedPackDate;
     document.getElementById('tag-time').innerText = formattedTime.toUpperCase();
 
-    // 5. Fire thermal print pipeline stream
     closeModal('tagCustomModal');
     document.body.classList.add('printing-knot-tag');
     window.print();
@@ -597,8 +601,6 @@ async function executeKnotTagPrint() {
                 successSound.play().catch(e => console.error("Audio playback error:", e));
                 
                 alert("Bill saved successfully!");
-                
-                // We await the clear operation completely to resolve the backend sync timing issue
                 await clearBill(); 
                 await loadSavedBills();
             } else {
@@ -804,7 +806,6 @@ async function executeKnotTagPrint() {
                 </div>
             </div>`;
 
-        // Preserved adjustment to keep from corrupting historical advance payment fields when setting fully paid
         document.getElementById('markPaidBtn').onclick = () => { 
             const totalBill = parseFloat(b.subtotal) - parseFloat(b.discount || 0); 
             document.getElementById('updAdvance').value = totalBill.toFixed(2); 
@@ -910,6 +911,63 @@ async function executeKnotTagPrint() {
             }
         } catch (err) { console.error("Could not load menu items."); }
     }
+
+    document.getElementById('customerPhone').addEventListener('input', async function(e) {
+        const phone = e.target.value.trim();
+        const pastOrdersBox = document.getElementById('pastOrdersContainer');
+        const rowsTarget = document.getElementById('pastOrdersRows');
+        
+        if (phone.length !== 10) {
+            pastOrdersBox.classList.add('hidden');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/customers/${phone}/history`);
+            if (response.ok) {
+                const data = await response.json(); 
+                
+                if (data.profile) {
+                    if (data.profile.name) {
+                        document.getElementById('customerName').value = data.profile.name.toUpperCase();
+                    }
+                    if (data.profile.address) {
+                        document.getElementById('customerAddress').value = data.profile.address.toUpperCase();
+                    }
+                }
+
+                if (data.history && data.history.length > 0) {
+                    rowsTarget.innerHTML = data.history.map(order => {
+                        const balance = parseFloat(order.total || 0);
+                        const statusText = balance > 0 ? 'DUE' : 'PAID';
+                        const statusClass = balance > 0 ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600';
+                        
+                        const itemsSummary = order.items.map(i => `${i.name} (x${i.quantity})`).join(', ');
+
+                        return `
+                            <tr class="hover:bg-slate-50/50">
+                                <td class="py-3 px-3 font-mono font-bold text-indigo-600">${order.id}</td>
+                                <td class="py-3 px-3 text-slate-500">${formatDateDDMMYYYY(order.date)}</td>
+                                <td class="py-3 px-3 text-slate-600 max-w-[300px] truncate uppercase" title="${itemsSummary}">${itemsSummary}</td>
+                                <td class="py-3 px-3 text-right font-bold text-slate-900">₹${parseFloat(order.subtotal - (order.discount || 0)).toFixed(2)}</td>
+                                <td class="py-3 px-3 text-center">
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${statusClass}">
+                                        ${statusText}
+                                    </span>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                    
+                    pastOrdersBox.classList.remove('hidden');
+                } else {
+                    pastOrdersBox.classList.add('hidden');
+                }
+            }
+        } catch (err) {
+            console.error("Failed to parse and pull history stream profiles:", err);
+        }
+    });
 
     window.onload = () => { 
         fetchMenuFromDB(); 

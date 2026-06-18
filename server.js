@@ -429,6 +429,31 @@ app.post('/api/logout', (req, res) => {
         // Fallback if no session exists
         res.json({ success: true });
     }
+});// Ensure the route path matches exactly: /api/customers/:phone/history
+app.get('/api/customers/:phone/history', async (req, res) => {
+    try {
+        const { phone } = req.params;
+
+        // 🎯 FIXED HERE: Changed BillCollection to Bill
+        const orders = await Bill.find({ phone: phone }).sort({ date: -1 });
+
+        // 2. Determine a profile name and address from the most recent order if available
+        let profile = { name: "", address: "" };
+        if (orders.length > 0) {
+            profile.name = orders[0].customer || "";
+            profile.address = orders[0].address || "";
+        }
+
+        // 3. Return the response back to the frontend in the correct JSON format
+        res.json({
+            profile: profile,
+            history: orders
+        });
+
+    } catch (error) {
+        console.error("Error fetching customer history:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
 });
 // Add this to your server.js
 app.patch('/api/users/:username', async (req, res) => {
