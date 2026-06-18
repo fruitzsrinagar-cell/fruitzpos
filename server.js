@@ -473,9 +473,6 @@ app.patch('/api/users/:username', async (req, res) => {
         res.status(500).json({ error: "Update failed" });
     }
 });
-
-
-
              // BasketItem
 
 // =================================================================

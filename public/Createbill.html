@@ -432,23 +432,17 @@ function printKnotTag(billId, billDate, defaultPackDate, defaultTime) {
 async function executeKnotTagPrint() {
     const billId = document.getElementById('modal-tag-bill-id').value;
     const billDate = document.getElementById('modal-tag-bill-date').value;
-    const rawDate = document.getElementById('modal-tag-pack-date').value; 
-    const rawTime = document.getElementById('modal-tag-time').value;      
+    const rawDate = document.getElementById('modal-tag-pack-date').value;
+    const rawTime = document.getElementById('modal-tag-time').value;
 
     try {
         const response = await fetch(`/api/bills/${billId}/packaging`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                packagedOn: rawDate,
-                packagedTime: rawTime
-            })
+            body: JSON.stringify({ packagedOn: rawDate, packagedTime: rawTime })
         });
-
         if (response.ok) {
             if (typeof loadSavedBills === 'function') loadSavedBills();
-        } else {
-            console.error("Failed to save packaging options to backend route configuration.");
         }
     } catch (err) {
         console.error("Database connection error:", err);
@@ -459,7 +453,6 @@ async function executeKnotTagPrint() {
         const [y, m, d] = rawDate.split('-');
         formattedPackDate = `${d}-${m}-${y}`;
     }
-
     let formattedTime = "N/A";
     if (rawTime) {
         let [hours, minutes] = rawTime.split(':');
@@ -469,17 +462,72 @@ async function executeKnotTagPrint() {
         formattedTime = `${h}:${minutes} ${ampm}`;
     }
 
-    document.getElementById('tag-bill-id').innerText = billId.toUpperCase();
-    document.getElementById('tag-bill-date').innerText = billDate;
-    document.getElementById('tag-pack-date').innerText = formattedPackDate;
-    document.getElementById('tag-time').innerText = formattedTime.toUpperCase();
-
     closeModal('tagCustomModal');
-    document.body.classList.add('printing-knot-tag');
-    window.print();
-    document.body.classList.remove('printing-knot-tag');
-}
 
+    // SAFE PRINT HANDLER FOR MOBILE BROWSERS
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isMobile) {
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            alert("Please allow pop-ups for Fruit'z POS to complete the tag print output.");
+            return;
+        }
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>FRUITZ_STICKY_TAG</title>
+                <style>
+                    body { font-family: monospace; width: 58mm; padding: 5px; margin: 0 auto; color: #000; background: #fff; font-size: 12px; }
+                    .text-center { text-align: center; }
+                    .bold { font-weight: bold; }
+                    .divider { border-top: 1px dashed #000; margin: 5px 0; }
+                    .alert-box { border: 1px solid #000; padding: 6px; margin-top: 5px; font-size: 11px; }
+                </style>
+            </head>
+            <body>
+                <div class="text-center bold" style="font-size:24px;">FRUIT’Z</div>
+                <div class="text-center" style="font-size:11px; font-style: italic;">For Your Wellbeing</div>
+                <div class="divider"></div>
+                <div><span class="bold">BILL ID:</span> ${billId.toUpperCase()}</div>
+                <div><span class="bold">BILL DATE:</span> ${billDate}</div>
+                <div><span class="bold">PACKED ON:</span> ${formattedPackDate}</div>
+                <div><span class="bold">TIME:</span> ${formattedTime.toUpperCase()}</div>
+                <div class="divider"></div>
+                <div class="text-center bold" style="font-size:20px">INSTRUCTION SLIP</div>
+                <div class="text-center bold" style="font-size:11px">DO NOT REMOVE THIS SLIP</div>
+                <div class="alert-box">
+                    <ul style="margin: 0; padding-left: 12px; font-weight:600; font-size:11px; line-height: 1.4;">
+                        <li style="margin-bottom: 3px;">IMMEDIATELY REMOVE ALL THE FRUITS FROM THE BASKET.</li>
+                        <li style="margin-bottom: 3px;">REFRIGERATE THE FRUITS AS SOON AS POSSIBLE.</li>
+                    </ul>
+                </div>
+                <div class="alert-box" style="font-weight: 700; text-align: center; line-height: 1.4;">
+                    <div>Best to use within 24hrs of packaging time.</div>
+                </div>
+                <div class="divider"></div>
+                <div class="text-center bold" style="font-size: 10px; margin-top: 8px;">*** THANK YOU ***</div>
+                <script>
+                    window.onload = function() {
+                        window.print();
+                        setTimeout(function() { window.close(); }, 300);
+                    };
+                <\/script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    } else {
+        // Keeps your exact original desktop printing workflow active on PC monitors
+        document.getElementById('tag-bill-id').innerText = billId.toUpperCase();
+        document.getElementById('tag-bill-date').innerText = billDate;
+        document.getElementById('tag-pack-date').innerText = formattedPackDate;
+        document.getElementById('tag-time').innerText = formattedTime.toUpperCase();
+
+        document.body.classList.add('printing-knot-tag');
+        window.print();
+        document.body.classList.remove('printing-knot-tag');
+    }
+}
     function renderMenu() {
         const box = document.getElementById('menuItems');
         const colors = ['bg-purple-700 hover:bg-purple-800', 'bg-blue-600 hover:bg-blue-800', 'bg-green-600 hover:bg-green-800', 'bg-orange-400 hover:bg-orange-500', 'bg-yellow-400', 'bg-red-500 hover:bg-red-800', 'bg-pink-500 hover:bg-pink-800'];
@@ -683,6 +731,9 @@ async function executeKnotTagPrint() {
                                 <button onclick="closeAllDropdowns(); printKnotTag('${b.id}', '${formatDateDDMMYYYY(b.date)}', '${b.packagedOn ? b.packagedOn : (b.deliveryDate ? formatDateDDMMYYYY(b.deliveryDate) : formatDateDDMMYYYY(b.date))}', '${b.packagedTime ? b.packagedTime : (b.deliveryTime ? b.deliveryTime : '22:00')}')" class="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase text-amber-600 hover:bg-amber-50">
                                     Sticky Tag
                                 </button>
+                                <button onclick="cancelOrder('${b.id}')" class="w-full text-left px-4 py-2 text-xs text-rose-600 font-medium hover:bg-rose-50 border-t border-slate-100">
+        Cancel Order
+    </button>
                             </div>
                         </div>
                     </td>
