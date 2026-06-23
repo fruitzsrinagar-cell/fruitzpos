@@ -123,6 +123,16 @@
             </div>
 
            <div id="pastOrdersContainer" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 lg:p-6 hidden">
+                <!-- Recent Cancellation Alert Banner -->
+                <div id="cancellationAlertBanner" class="mb-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl p-3.5 hidden flex items-center gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-rose-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div>
+                        <p class="text-xs font-black uppercase tracking-wider text-rose-700">Alert: The most recent order for this customer was cancelled!</p>
+                    </div>
+                </div>
+
                 <h3 class="text-sm font-bold text-amber-600 uppercase mb-3 flex items-center gap-2">
                     <span class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
                     Customer Purchase History
@@ -464,7 +474,6 @@ async function executeKnotTagPrint() {
 
     closeModal('tagCustomModal');
 
-    // SAFE PRINT HANDLER FOR MOBILE BROWSERS
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     if (isMobile) {
         const printWindow = window.open('', '_blank');
@@ -517,7 +526,6 @@ async function executeKnotTagPrint() {
         `);
         printWindow.document.close();
     } else {
-        // Keeps your exact original desktop printing workflow active on PC monitors
         document.getElementById('tag-bill-id').innerText = billId.toUpperCase();
         document.getElementById('tag-bill-date').innerText = billDate;
         document.getElementById('tag-pack-date').innerText = formattedPackDate;
@@ -702,7 +710,6 @@ async function executeKnotTagPrint() {
                 let formattedDelivery = "-";
                 const isCancelled = b.orderStatus === 'cancelled';
 
-                // Handle the Delivery column text and styling based on status
                 if (isCancelled) {
                     dateColor = "text-rose-600 font-black";
                     formattedDelivery = `<span class="bg-rose-100 text-rose-700 px-2 py-0.5 rounded text-[10px] tracking-wide uppercase">Cancelled</span>`;
@@ -714,7 +721,7 @@ async function executeKnotTagPrint() {
                     else if (dDate.getTime() > today.getTime()) dateColor = "text-rose-600";
                 }
 
-                const displayRowText = isCancelled ? 'line-through text-slate-400' : '';
+                const displayRowText = isCancelled ? 'line-through text-slate-400 opacity-75' : '';
 
                 return `<tr class="hover:bg-slate-50 border-b ${displayRowText}">
                     <td data-label="Bill ID" class="px-4 py-4 font-mono font-bold text-indigo-600">${b.id}</td>
@@ -749,7 +756,7 @@ async function executeKnotTagPrint() {
 
     async function cancelOrder(billId) {
         const reason = prompt("Enter the cancellation note / reason for Bill " + billId + ":");
-        if (reason === null) return; // User pressed Cancel on prompt
+        if (reason === null) return; 
         
         if (!reason.trim()) {
             alert("A cancellation note is required to process this request.");
@@ -771,7 +778,7 @@ async function executeKnotTagPrint() {
                     alert(`Order ${billId} has been successfully cancelled.`);
                     await loadSavedBills();
                 } else {
-                    alert("Failed to update status on server. Check backend routes configuration.");
+                    alert("Failed to update status on server.");
                 }
             } catch (err) {
                 console.error("Connection error while cancelling order:", err);
@@ -820,32 +827,31 @@ async function executeKnotTagPrint() {
         body.innerHTML = `
             <div class="space-y-6">
                 <div class="grid grid-cols-2 gap-4">
-    <div>
-        <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">Customer</p>
-        <p class="text-sm font-bold uppercase text-slate-900">${b.customer}</p>
-    </div>
-    <div>
-        <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">Phone</p>
-        <p class="text-sm font-semibold text-slate-700">${b.phone || 'N/A'}</p>
-    </div>
-    <div class="col-span-2">
-        <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">Address</p>
-        <p class="text-sm font-semibold text-slate-700">${b.address || 'N/A'}</p>
-    </div>
-    <div>
-        <p class="text-[10px] text-indigo-400 font-bold uppercase mb-1">Packaged Date</p>
-        <p class="text-sm font-black text-indigo-600">${b.packagedOn ? formatDateDDMMYYYY(b.packagedOn) : 'NOT PACKAGED'}</p>
-    </div>
-    <div>
-        <p class="text-[10px] text-indigo-400 font-bold uppercase mb-1">Packaged Time</p>
-        <p class="text-sm font-black text-indigo-600">${b.packagedTime ? formatTime12H(b.packagedTime) : 'NOT PACKAGED'}</p>
-    </div>
-    ${b.orderStatus === 'cancelled' ? `
-    <div class="col-span-2 bg-rose-50 border border-rose-200 rounded-xl p-3">
-        <p class="text-[10px] text-rose-500 font-black uppercase mb-0.5">Cancellation Note</p>
-        <p class="text-xs text-rose-900 font-medium uppercase">${b.cancellationNote || 'NO NOTE PROVIDED'}</p>
-    </div>` : ''}
-</div>
+                    <div>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">Customer</p>
+                        <p class="text-sm font-bold uppercase text-slate-900">${b.customer}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">Phone</p>
+                        <p class="text-sm font-semibold text-slate-700">${b.phone || 'N/A'}</p>
+                    </div>
+                    <div class="col-span-2">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">Address</p>
+                        <p class="text-sm font-semibold text-slate-700">${b.address || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-indigo-400 font-bold uppercase mb-1">Packaged Date</p>
+                        <p class="text-sm font-black text-indigo-600">${b.packagedOn ? formatDateDDMMYYYY(b.packagedOn) : 'NOT PACKAGED'}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-indigo-400 font-bold uppercase mb-1">Packaged Time</p>
+                        <p class="text-sm font-black text-indigo-600">${b.packagedTime ? formatTime12H(b.packagedTime) : 'NOT PACKAGED'}</p>
+                    </div>
+                    ${b.orderStatus === 'cancelled' ? `
+                    <div class="col-span-2 bg-rose-50 border border-rose-200 rounded-xl p-3">
+                        <p class="text-[10px] text-rose-500 font-black uppercase mb-0.5">Cancellation Note</p>
+                        <p class="text-xs text-rose-900 font-medium uppercase">${b.cancellationNote || 'NO NOTE PROVIDED'}</p>
+                    </div>` : ''}
                 </div>
                 <div class="bg-indigo-50/50 p-4 rounded-xl space-y-2 border border-indigo-100">
                     <p class="text-[10px] text-indigo-400 font-black uppercase mb-2">Itemized List</p>
@@ -1012,11 +1018,13 @@ async function executeKnotTagPrint() {
    document.getElementById('customerPhone').addEventListener('input', async function(e) {
         const phone = e.target.value.trim();
         const pastOrdersBox = document.getElementById('pastOrdersContainer');
+        const alertBanner = document.getElementById('cancellationAlertBanner');
         const rowsTarget = document.getElementById('pastOrdersRows');
         const cardsTarget = document.getElementById('pastOrdersCards');
         
         if (phone.length !== 10) {
             pastOrdersBox.classList.add('hidden');
+            alertBanner.classList.add('hidden');
             return;
         }
 
@@ -1035,6 +1043,14 @@ async function executeKnotTagPrint() {
                 }
 
                 if (data.history && data.history.length > 0) {
+                    // Check if the most recent order is cancelled
+                    const mostRecentOrder = data.history[0];
+                    if (mostRecentOrder.orderStatus === 'cancelled') {
+                        alertBanner.classList.remove('hidden');
+                    } else {
+                        alertBanner.classList.add('hidden');
+                    }
+
                     let tableHTML = '';
                     let cardsHTML = '';
 
@@ -1042,7 +1058,6 @@ async function executeKnotTagPrint() {
                         const isCancelled = order.orderStatus === 'cancelled';
                         const balance = parseFloat(order.total || 0);
                         
-                        // Status styling configuration
                         let statusText = balance > 0 ? 'DUE' : 'PAID';
                         let statusClass = balance > 0 ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600';
                         
@@ -1059,7 +1074,6 @@ async function executeKnotTagPrint() {
                         const orderAmount = parseFloat(order.subtotal - (order.discount || 0)).toFixed(2);
                         const rowDecorationClass = isCancelled ? 'line-through text-slate-400 opacity-75' : '';
 
-                        // Build standard rows for Desktop Table layout
                         tableHTML += `
                             <tr class="hover:bg-slate-50/50">
                                 <td class="py-3 px-3 font-mono font-bold text-indigo-600 ${isCancelled ? 'text-slate-400' : ''}">${order.id}</td>
@@ -1074,7 +1088,6 @@ async function executeKnotTagPrint() {
                             </tr>
                         `;
 
-                        // Build stacked cards tailored specifically for Mobile displays
                         cardsHTML += `
                             <div class="bg-white rounded-xl p-3 border border-slate-200 flex flex-col gap-1 text-xs shadow-sm">
                                 <div class="flex justify-between items-center">
@@ -1092,17 +1105,17 @@ async function executeKnotTagPrint() {
                         `;
                     });
 
-                    // Push markup into their respective elements
                     rowsTarget.innerHTML = tableHTML;
                     cardsTarget.innerHTML = cardsHTML;
                     
                     pastOrdersBox.classList.remove('hidden');
                 } else {
                     pastOrdersBox.classList.add('hidden');
+                    alertBanner.classList.add('hidden');
                 }
             }
         } catch (err) {
-            console.error("Failed to parse and pull history stream profiles:", err);
+            console.error("Failed to parse customer history stream:", err);
         }
     });
     window.onload = () => { 
