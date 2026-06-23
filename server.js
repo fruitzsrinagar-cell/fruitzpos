@@ -112,6 +112,15 @@ const BillSchema = new mongoose.Schema({
         type: String, // Stores format like "2026-06-02"
         default: ""
     },
+    orderStatus: {
+    type: String,
+    default: 'active'
+       },
+       
+       cancellationNote: {
+           type: String,
+           default: ''
+       },
     packagedTime: {
         type: String, // Stores format like "22:00"
         default: ""
@@ -511,7 +520,37 @@ app.delete('/api/basket-items/:id', async (req, res) => {
 });
 
 
+// PATCH Route to cancel an order and dynamically create the fields using Mongoose model
+app.patch('/api/bills/:id/cancel', async (req, res) => {
+    const billId = req.params.id;
+    const { orderStatus, cancellationNote } = req.body;
 
+    if (!cancellationNote || cancellationNote.trim() === "") {
+        return res.status(400).json({ error: "Cancellation note is required" });
+    }
+
+    try {
+        // FIXED: Using the Mongoose Bill model instead of the undefined 'db' object
+        const result = await Bill.updateOne(
+            { id: billId }, 
+            { 
+                $set: { 
+                    orderStatus: orderStatus,          // Dynamically saves "cancelled"
+                    cancellationNote: cancellationNote // Dynamically saves the text reason
+                } 
+            }
+        );
+
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ error: "Bill not found" });
+        }
+
+        res.status(200).json({ message: "Order cancelled successfully and fields created" });
+    } catch (err) {
+        console.error("Database error while cancelling order:", err);
+        res.status(500).json({ error: "Internal server database error" });
+    }
+});
 
 // 4. Catch-all Route (Keep this at the very BOTTOM of your routes)
 // CHANGE the catch-all block at the very bottom to look EXACTLY like this:
