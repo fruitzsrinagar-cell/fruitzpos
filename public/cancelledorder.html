@@ -78,23 +78,22 @@
     </div>
 </header>
   
-<main class="max-w-[1600px] mx-auto p-4 lg:p-8 space-y-6">
+<main class="max-w-[1600px] mx-auto p-4 lg:p-8 space-y-6 bg-white">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
-            <h2 class="text-l font-bold text-slate-700">Cancelled Orders</h2>
+            <h2 class="text-l font-bold text-slate-800">Cancelled Orders</h2>
             <p class="text-xs text-slate-400 font-medium">Review and inspect voided store transactions and cancellation metrics.</p>
         </div>
         <div class="flex items-center gap-3">
             <div class="bg-rose-50 border border-rose-100 text-rose-700 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-                Total number of cancelled orders: <span id="cancelledCount">0</span>
+                Total cancelled orders: <span id="cancelledCount">0</span>
             </div>
         </div>
     </div>
 
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
         <div class="relative">
-            <input id="searchFilter" type="text" oninput="filterTable()" placeholder="Search by name, phone number, address or bill ID..." class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium placeholder-slate-400">
+            <input id="searchFilter" type="text" oninput="filterTable()" placeholder="Search by name, phone number, address or bill ID..." class="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium placeholder-slate-400">
             <div class="absolute left-3.5 top-3.5 text-slate-400">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -120,7 +119,7 @@
                 <tbody id="cancelledBillsList" class="text-sm divide-y divide-slate-50">
                     <tr>
                         <td colspan="7" class="text-center py-10 text-slate-400 font-bold uppercase tracking-wider text-xs">
-                            Loading logs stream...
+                            Loading cancelled orders....
                         </td>
                     </tr>
                 </tbody>

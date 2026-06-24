@@ -142,7 +142,8 @@ const History = mongoose.model('History', HistorySchema);
 
 const MenuSchema = new mongoose.Schema({
     name: String,
-    price: Number
+    price: Number,
+    category: String
 });
 const Menu = mongoose.model('Menu', MenuSchema);
 
