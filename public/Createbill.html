@@ -56,6 +56,21 @@
   </style>
 </head>
 <body class="min-h-screen text-slate-800">
+
+<div id="toastNotification" class="fixed top-24 right-4 lg:right-8 z-[200] hidden transform translate-y-2 opacity-0 transition-all duration-300 ease-out">
+    <div class="bg-slate-900 text-white px-6 py-3.5 rounded-xl shadow-2xl border border-slate-800 flex items-center gap-3">
+        <div class="bg-emerald-500 text-slate-950 p-1.5 rounded-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+            </svg>
+        </div>
+        <div class="text-center">
+            <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-0.5">System Status</p>
+            <p class="text-xs font-bold uppercase tracking-wide text-emerald-400">Bill Saved Successfully!</p>
+        </div>
+    </div>
+</div>
+
 <header class="bg-white border-b px-4 lg:px-8 py-4 sticky top-0 z-50">
     <div class="flex flex-wrap items-center justify-between gap-4">
         <div class="flex items-center gap-3">
@@ -170,7 +185,7 @@
                         <button onclick="addItemToBill()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium shadow-md">Add</button>
                     </div>
                 </div>
-                <div id="menuItems" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-[400px] lg:max-h-[300px] overflow-y-auto custom-scrollbar pr-2"></div>
+                <div id="menuItems" class="flex gap-4 max-h-[400px] lg:max-h-[300px] overflow-hidden pr-2"></div>
             </div>
         </div>
 
@@ -390,6 +405,7 @@
     let menu = []; 
     let billItems = [];
     let currentSavedBills = [];
+    let selectedCategory = '';
 
     function fmt(n) { return Number(n).toFixed(2); }
 
@@ -536,15 +552,47 @@ async function executeKnotTagPrint() {
         document.body.classList.remove('printing-knot-tag');
     }
 }
+
     function renderMenu() {
         const box = document.getElementById('menuItems');
+        
+        const categories = [...new Set(menu.map(m => m.category || 'General'))];
+        if (!selectedCategory && categories.length > 0) {
+            selectedCategory = categories[0];
+        }
+
+        // Updated innerHTML setup with grid-cols-2 and content-start configuration
+        box.innerHTML = `
+            <div id="categoryStack" class="w-1/4 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-1 border-r border-slate-100"></div>
+            <div id="itemsGrid" class="w-3/4 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-2 content-start overflow-y-auto custom-scrollbar pl-1"></div>
+        `;
+
+        const categoryStack = document.getElementById('categoryStack');
+        const itemsGrid = document.getElementById('itemsGrid');
+
+        categoryStack.innerHTML = categories.map(cat => {
+            const isActive = selectedCategory === cat;
+            const activeClass = isActive ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200';
+            return `<button onclick="selectCategory('${cat}')" class="w-full text-left p-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all truncate ${activeClass}">${cat}</button>`;
+        }).join('');
+
         const colors = ['bg-purple-700 hover:bg-purple-800', 'bg-blue-600 hover:bg-blue-800', 'bg-green-600 hover:bg-green-800', 'bg-orange-400 hover:bg-orange-500', 'bg-yellow-400', 'bg-red-500 hover:bg-red-800', 'bg-pink-500 hover:bg-pink-800'];
-        box.innerHTML = menu.map((m, i) => {
+        
+        itemsGrid.innerHTML = menu.map((m, i) => {
+            const itemCat = m.category || 'General';
+            if (itemCat !== selectedCategory) return '';
+            
             const colorClass = colors[i % colors.length];
             const textColor = (colorClass.includes('yellow')) ? 'text-slate-900' : 'text-white';
-            return `<div onclick="quickAdd(${i})" class="${colorClass} rounded-xl p-3 cursor-pointer transition-all shadow-md transform active:scale-95"><p class="font-bold ${textColor} text-xs uppercase tracking-wide truncate">${m.name}</p><p class="text-[10px] ${textColor} opacity-90 font-black">₹${parseFloat(m.price).toFixed(2)}</p></div>`;
-        }).join('');
+            return `<div onclick="quickAdd(${i})" class="${colorClass} rounded-xl p-2.5 cursor-pointer transition-all shadow-md transform active:scale-95"><p class="font-bold ${textColor} text-[11px] uppercase tracking-wide truncate">${m.name}</p><p class="text-[9px] ${textColor} opacity-90 font-black">₹${parseFloat(m.price).toFixed(2)}</p></div>`;
+        }).filter(Boolean).join('');
+
         document.getElementById('selectItem').innerHTML = `<option value="">Select...</option>` + menu.map((m, i) => `<option value="${i}">${m.name}</option>`).join('');
+    }
+
+    function selectCategory(cat) {
+        selectedCategory = cat;
+        renderMenu();
     }
 
     function quickAdd(idx) {
@@ -656,12 +704,32 @@ async function executeKnotTagPrint() {
             });
             
             if (response.ok) {
+                // Play audio cue
                 successSound.currentTime = 0; 
                 successSound.play().catch(e => console.error("Audio playback error:", e));
                 
-                alert("Bill saved successfully!");
+                // Reset fields and query next ID structure
                 await clearBill(); 
                 await loadSavedBills();
+
+                // Fire beautiful toast alert overlay sequence
+                const toast = document.getElementById('toastNotification');
+                toast.classList.remove('hidden');
+                
+                void toast.offsetWidth; // Force CSS engine reflow execution
+                
+                toast.classList.remove('translate-y-2', 'opacity-0');
+                toast.classList.add('translate-y-0', 'opacity-100');
+
+                // Smooth out automated fade-away block after 3s time limit
+                setTimeout(() => {
+                    toast.classList.remove('translate-y-0', 'opacity-100');
+                    toast.classList.add('translate-y-2', 'opacity-0');
+                    setTimeout(() => {
+                        toast.classList.add('hidden');
+                    }, 300);
+                }, 3000);
+
             } else {
                 alert("Server rejected the bill payload. Check server logs.");
             }
@@ -1053,7 +1121,6 @@ if (currentSavedBills.length > 7) {
                 }
 
                 if (data.history && data.history.length > 0) {
-                    // Check if the most recent order is cancelled
                     const mostRecentOrder = data.history[0];
                     if (mostRecentOrder.orderStatus === 'cancelled') {
                         alertBanner.classList.remove('hidden');
@@ -1128,6 +1195,7 @@ if (currentSavedBills.length > 7) {
             console.error("Failed to parse customer history stream:", err);
         }
     });
+
     window.onload = () => { 
         fetchMenuFromDB(); 
         loadSavedBills(); 
